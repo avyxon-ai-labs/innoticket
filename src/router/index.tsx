@@ -1,0 +1,47 @@
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { ProtectedLayout }          from '../layouts/ProtectedLayout';
+import { AuthLayout }               from '../layouts/AuthLayout';
+import { DashboardPage }            from '../pages/DashboardPage';
+import { TicketsPage }              from '../pages/TicketsPage';
+import { JobsPage }                 from '../pages/JobsPage';
+import { ServiceEscalationsPage }   from '../pages/ServiceEscalationsPage';
+import { ProjectsPage }             from '../pages/ProjectsPage';
+import { UsersPage }                from '../pages/UsersPage';
+import { CenterGridPage }           from '../pages/CenterGridPage';
+import {
+  LoginPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+} from '../modules/auth';
+
+export const router = createBrowserRouter([
+  // ── Authenticated app ──────────────────────────────────────────────────────
+  {
+    path: '/',
+    element: <ProtectedLayout />,
+    children: [
+      { index: true,          element: <DashboardPage /> },
+      { path: 'tickets',      element: <TicketsPage /> },
+      { path: 'users',        element: <UsersPage /> },
+      { path: 'jobs',         element: <JobsPage /> },
+      // Configurations
+      { path: 'configurations/projects',    element: <ProjectsPage /> },
+      { path: 'configurations/services',    element: <ServiceEscalationsPage /> },
+      { path: 'configurations/centregrid',  element: <CenterGridPage /> },
+      // Force reset-password inside protected shell so token is already stored
+      { path: 'reset-password', element: <ResetPasswordPage /> },
+    ],
+  },
+
+  // ── Auth (public) ──────────────────────────────────────────────────────────
+  {
+    element: <AuthLayout />,
+    children: [
+      { path: '/login',           element: <LoginPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+    ],
+  },
+
+  // ── Fallback ───────────────────────────────────────────────────────────────
+  { path: '*', element: <Navigate to="/" replace /> },
+]);

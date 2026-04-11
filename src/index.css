@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts ──────────────────────────────────────────────────────────── */
+/* ── Design Tokens ─────────────────────────────────────────────────────────── */
+:root {
+  /* ─ Core palette ─ */
+  --sage:          #4A7C59;
+  --sage-light:    #EBF2ED;
+  --sage-mid:      #C5DBC9;
+
+  --ink:           #0F1117;
+  --ink-mid:       #3D4151;
+  --ink-light:     #6B7280;
+
+  --ghost:         #F7F7F5;
+  --white:         #FFFFFF;
+  --border:        #E8E8E4;
+
+  --amber:         #D97706;
+  --amber-light:   #FEF3C7;
+  --red:           #DC2626;
+  --red-light:     #FEE2E2;
+  --blue:          #2563EB;
+  --blue-light:    #EFF6FF;
+
+  /* ─ Semantic aliases (used throughout components) ─ */
+  --bg:            var(--ghost);
+  --surface:       var(--white);
+  --surface-hover: var(--ghost);
+  --text:          var(--ink-light);
+  --text-h:        var(--ink);
+  --text-mid:      var(--ink-mid);
+  --text-muted:    var(--ink-light);
+
+  --accent:        var(--sage);
+  --accent-bg:     var(--sage-light);
+  --accent-mid:    var(--sage-mid);
+  --accent-text:   var(--sage);
+  --accent-border: var(--sage-mid);
+
+  /* ─ Sidebar ─ */
+  --sidebar-width:  240px;
+  --sidebar-bg:     var(--white);
+  --sidebar-border: var(--border);
+
+  /* ─ Header ─ */
+  --header-height:  60px;
+
+  /* ─ Typography ─ */
+  --font-sans:    'DM Sans', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono:    'DM Mono', ui-monospace, monospace;
+
+  /* ─ Radius ─ */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  20px;
+
+  /* ─ Shadow ─ */
+  --shadow-sm:  0 1px 2px rgba(15,17,23,0.04);
+  --shadow-md:  0 6px 24px rgba(15,17,23,0.07);
+  --shadow-lg:  0 24px 80px rgba(15,17,23,0.18);
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ghost:        #16171d;
+    --white:        #1f2028;
+    --border:       #2e303a;
+    --ink:          #f3f4f6;
+    --ink-mid:      #d1d5db;
+    --ink-light:    #9ca3af;
+    --sage:         #6fcf97;
+    --sage-light:   rgba(111,207,151,0.12);
+    --sage-mid:     rgba(111,207,151,0.25);
+    --bg:           #16171d;
+    --surface:      #1f2028;
+    --surface-hover:#2a2b35;
+  }
+}
+
+/* ── Base Reset ────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+input, textarea, button {
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+}
+
+#root { display: flex; min-height: 100vh; }
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 5px; height: 5px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--border); border-radius: 99px; }
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Animations ────────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

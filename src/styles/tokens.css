@@ -1,0 +1,11 @@
+/*
+ * Design tokens — source of truth.
+ * These are inlined into index.css for build; this file is kept for reference.
+ *
+ * Palette derived from logistics-dashboard reference design.
+ *
+ * Fonts:  DM Sans (body) · Fraunces (display) · DM Mono (mono)
+ * Accent: Sage green  #4A7C59
+ * Base:   Ink dark    #0F1117
+ * BG:     Ghost       #F7F7F5
+ */
