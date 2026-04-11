@@ -49,3 +49,51 @@ export function debounce<T extends (...args: unknown[]) => void>(
     timer = setTimeout(() => fn(...args), delay);
   };
 }
+
+/**
+ * Convert total minutes to a human-readable string.
+ * e.g. 90 → "1h 30m", 45 → "45m", 1500 → "1d 1h"
+ */
+export function formatDuration(minutes: number): string {
+  if (!minutes || minutes <= 0) return '—';
+  const days  = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins  = minutes % 60;
+  if (days > 0)  return `${days}d ${hours > 0 ? `${hours}h` : ''}`.trim();
+  if (hours > 0) return `${hours}h ${mins > 0 ? `${mins}m` : ''}`.trim();
+  return `${mins}m`;
+}
+
+/**
+ * Compute SLA countdown from a deadline ISO string vs now.
+ * Returns { label, breached, urgent }
+ * - breached: deadline has passed
+ * - urgent: less than 2 hours remaining
+ */
+export function formatSlaCountdown(deadlineIso: string): {
+  label:    string;
+  breached: boolean;
+  urgent:   boolean;
+} {
+  if (!deadlineIso) return { label: '—', breached: false, urgent: false };
+
+  const deadline = new Date(
+    deadlineIso.endsWith('Z') ? deadlineIso : deadlineIso + 'Z',
+  ).getTime();
+  const diffMs = deadline - Date.now();
+
+  if (diffMs <= 0) return { label: 'Breached', breached: true, urgent: true };
+
+  const totalMins = Math.floor(diffMs / 60_000);
+  const hours     = Math.floor(totalMins / 60);
+  const mins      = totalMins % 60;
+  const days      = Math.floor(hours / 24);
+  const remHours  = hours % 24;
+
+  let label: string;
+  if (days > 0)       label = `${days}d ${remHours > 0 ? `${remHours}h` : ''} left`.trim();
+  else if (hours > 0) label = `${hours}h ${mins > 0 ? `${mins}m` : ''} left`.trim();
+  else                label = `${mins}m left`;
+
+  return { label, breached: false, urgent: hours < 2 };
+}
