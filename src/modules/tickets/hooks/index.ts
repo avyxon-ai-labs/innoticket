@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ticketService }                         from '../../../services/ticket.service';
 import { serviceEscalationService }              from '../../../services/service-escalation.service';
+import { dashboardService }                      from '../../../services/dashboard.service';
+import type { DashboardSummaryParams }           from '../../../services/dashboard.service';
 import type {
   TicketQueryParams,
   TicketCreatePayload,
@@ -62,6 +64,23 @@ export function useTicketEvents(id: string | null, enabled: boolean) {
   });
 }
 
+export function useDashboardSummary(params: DashboardSummaryParams) {
+  // Stable serialised key so object identity changes don't prevent cache hits
+  const key = JSON.stringify(params);
+  return useQuery({
+    queryKey: ['dashboard', 'summary', key],
+    queryFn:  async () => {
+      const res = await dashboardService.getSummary(params);
+      // Handle both envelope { data: {...} } and flat { open, ... } responses
+      const raw = res.data as unknown as Record<string, unknown>;
+      return (raw.data ?? raw) as import('../../../services/dashboard.service').DashboardSummary;
+    },
+    enabled:   !!params.projectCode,
+    staleTime: 0,           // always re-fetch when filters change
+    refetchOnWindowFocus: false,
+  });
+}
+
 // ── Mutations ─────────────────────────────────────────────────────────────────
 
 export function useRaiseTicket() {
@@ -101,22 +120,45 @@ export function useUploadAttachment() {
   });
 }
 
+export interface ServiceEscalationGroup {
+  serviceName:    string;
+  escalationTypes: string[];
+}
+
 /**
- * Escalation types available for a given service name.
- * Calls GET /api/service-escalations?serviceName=X&active=true
- * and deduplicates the escalationType values.
+ * Fetches GET /api/service-escalations?active=true once and groups into
+ * [{ serviceName, escalationTypes[] }] sorted alphabetically.
  */
-export function useEscalationTypesByService(serviceName: string | null) {
+export function useServiceEscalationGroups() {
   return useQuery({
-    queryKey: ['service-escalations', 'escalation-types', serviceName],
+    queryKey: ['service-escalations', 'grouped'],
     queryFn:  async () => {
-      const res   = await serviceEscalationService.getAll({ serviceName: serviceName!, active: true });
-      const types = res.data.data.map((s) => s.escalationType);
-      return [...new Set(types)].sort();
+      const res = await serviceEscalationService.getAll({ active: true });
+      const map = new Map<string, Set<string>>();
+      for (const item of res.data.data) {
+        if (!map.has(item.serviceName)) map.set(item.serviceName, new Set());
+        map.get(item.serviceName)!.add(item.escalationType);
+      }
+      const groups: ServiceEscalationGroup[] = [];
+      for (const [serviceName, types] of map) {
+        groups.push({ serviceName, escalationTypes: [...types].sort() });
+      }
+      return groups.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
     },
-    enabled:   !!serviceName,
     staleTime: 1000 * 60 * 5,
   });
+}
+
+/**
+ * @deprecated Use useServiceEscalationGroups instead.
+ * Escalation types available for a given service name (single-service fetch).
+ */
+export function useEscalationTypesByService(serviceName: string | null) {
+  const { data: groups = [] } = useServiceEscalationGroups();
+  return {
+    data:      groups.find((g) => g.serviceName === serviceName)?.escalationTypes ?? [],
+    isLoading: false,
+  };
 }
 
 // Re-export lookup hooks so ticket components only import from one place

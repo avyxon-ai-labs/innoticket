@@ -7,7 +7,8 @@ import { Button }                     from '../../../components/ui/Button';
 import { Select }                     from '../../../components/ui/Select';
 import { Spinner }                    from '../../../components/ui/Spinner';
 import { cn, formatLocalDateTime,
-         formatDuration, truncate }   from '../../../utils';
+         formatDuration, truncate,
+         formatActiveDuration }       from '../../../utils';
 import { useNavigationStore }         from '../../../store/navigationStore';
 import { useTickets }                 from '../hooks';
 import { useTicketStore }             from '../store';
@@ -16,6 +17,25 @@ import {
   STATUS_TRANSITIONS,
 }                                     from '../../../services/ticket.service';
 import type { TicketResponse }        from '../../../services/ticket.service';
+
+// ── Escalation helpers ────────────────────────────────────────────────────────
+
+function isEscalated(level: string | null | undefined): boolean {
+  return !!level && level !== 'NONE';
+}
+
+function EscalationChip({ level }: { level: string }) {
+  const isL2 = level === 'L2';
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[0.58rem] font-bold px-1.5 py-0.5
+                       rounded-[5px] border uppercase tracking-wide leading-none
+                       ${isL2
+                         ? 'bg-[#FEF2F2] border-[#FECACA] text-[#B91C1C]'
+                         : 'bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]'}`}>
+      ⚠ {level}
+    </span>
+  );
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -51,6 +71,19 @@ function TicketCard({
             {ticket.project.projectCode} · {ticket.center.centerCode}
           </p>
           <p className="text-xs text-[var(--ink-light)]">{ticket.center.centerName}</p>
+          {/* Active duration + escalation */}
+          {(ticket.activeSince || isEscalated(ticket.escalationLevel)) && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              {formatActiveDuration(ticket.activeSince) && (
+                <span className="text-xs font-semibold text-[var(--ink)] tabular-nums">
+                  {formatActiveDuration(ticket.activeSince)}
+                </span>
+              )}
+              {isEscalated(ticket.escalationLevel) && (
+                <EscalationChip level={ticket.escalationLevel!} />
+              )}
+            </div>
+          )}
         </div>
         <TicketStatusBadge status={ticket.status} />
       </div>
@@ -109,22 +142,25 @@ export function TicketTable() {
   const { pushView }  = useNavigationStore();
   const [refetchKey, setRefetchKey] = useState(0);
 
-  const projectCodes = Array.isArray(filters.projectCodes) ? filters.projectCodes : [];
-  const centerCodes  = Array.isArray(filters.centerCodes)  ? filters.centerCodes  : [];
-  const services     = Array.isArray(filters.services)     ? filters.services     : [];
+  const projectCode = typeof filters.projectCode === 'string' ? filters.projectCode : '';
+  const centerCodes = Array.isArray(filters.centerCodes) ? filters.centerCodes : [];
+  const services    = Array.isArray(filters.services)    ? filters.services    : [];
 
   const queryParams = {
     page:      pagination.page,
     size:      pagination.size,
     statuses:  TAB_STATUSES[activeTab].join(','),
-    ...(filters.search       && { search:       filters.search }),
-    ...(projectCodes.length  && { projectCodes: projectCodes.join(',') }),
-    ...(centerCodes.length   && { centerCodes:  centerCodes.join(',') }),
-    ...(services.length      && { services:     services.join(',') }),
-    _k: refetchKey, // forces re-fetch on manual refresh
+    ...(projectCode           && { projectCodes: projectCode }),
+    ...(filters.search        && { search:       filters.search }),
+    ...(centerCodes.length    && { centerCodes:  centerCodes.join(',') }),
+    ...(services.length       && { services:     services.join(',') }),
+    _k: refetchKey,
   };
 
-  const { data, isLoading, isFetching, refetch } = useTickets(queryParams as Parameters<typeof useTickets>[0]);
+  // Don't fetch until a project is selected
+  const { data, isLoading, isFetching, refetch } = useTickets(
+    queryParams as Parameters<typeof useTickets>[0],
+  );
 
   const rows          = data?.content       ?? [];
   const totalElements = data?.totalElements ?? 0;
@@ -238,6 +274,26 @@ export function TicketTable() {
     );
   }
 
+  // ── No project selected guard ───────────────────────────────────────────────
+
+  if (!projectCode) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-16 text-center
+                      bg-[var(--surface)] border border-[var(--border)] rounded-[14px]">
+        <div className="w-12 h-12 rounded-[14px] bg-[var(--ghost)] border border-[var(--border)]
+                        flex items-center justify-center">
+          <Clock size={20} className="text-[var(--ink-light)]" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-[var(--ink)]">Select a project</p>
+          <p className="text-xs text-[var(--ink-light)] mt-1">
+            Choose a project from the filter above to view tickets.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -311,6 +367,7 @@ export function TicketTable() {
             <thead>
               <tr className="bg-[var(--ghost)]">
                 <TH>Ticket No.</TH>
+                <TH>Active / Level</TH>
                 <TH>Date & Time</TH>
                 <TH>Project</TH>
                 <TH>Center Code</TH>
@@ -323,7 +380,6 @@ export function TicketTable() {
                 <TH>Description</TH>
                 <TH>Status</TH>
                 <TH>Resolved By</TH>
-                <TH>Resolved Stage</TH>
                 <TH>Resolved At</TH>
                 <TH>Duration</TH>
                 <TH className="text-right pr-4">Actions</TH>
@@ -352,18 +408,41 @@ export function TicketTable() {
                     </tr>
                   )
                   : rows.map((t: TicketResponse) => {
-                      const canUpdate = !!STATUS_TRANSITIONS[t.status];
+                      const canUpdate  = !!STATUS_TRANSITIONS[t.status];
+                      const escalated  = isEscalated(t.escalationLevel);
                       return (
                         <tr
                           key={t.id}
                           onClick={() => viewDetail(t)}
-                          className="border-t border-[var(--border)] hover:bg-[var(--ghost)]
-                                     transition-colors cursor-pointer"
+                          className={cn(
+                            'border-t border-[var(--border)] transition-colors cursor-pointer',
+                            escalated
+                              ? 'bg-[#FFFBEB] hover:bg-[#FEF3C7]'
+                              : 'hover:bg-[var(--ghost)]',
+                          )}
                         >
                           <TD>
                             <span className="font-mono text-xs text-[var(--ink)] font-semibold">
                               #{t.id}
                             </span>
+                          </TD>
+                          {/* Active Duration + Escalation Level */}
+                          <TD>
+                            <div className="flex flex-col gap-1">
+                              {(() => {
+                                const dur = formatActiveDuration(t.activeSince);
+                                return dur ? (
+                                  <span className="text-xs font-semibold text-[var(--ink)] tabular-nums">
+                                    {dur}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-[var(--ink-light)]">—</span>
+                                );
+                              })()}
+                              {isEscalated(t.escalationLevel) && (
+                                <EscalationChip level={t.escalationLevel!} />
+                              )}
+                            </div>
                           </TD>
                           <TD>
                             <span className="text-xs whitespace-nowrap">
@@ -438,9 +517,6 @@ export function TicketTable() {
                                 </div>
                               )
                               : <span className="text-xs text-[var(--ink-light)]">—</span>}
-                          </TD>
-                          <TD>
-                            <span className="text-xs">{t.resolvedStage || '—'}</span>
                           </TD>
                           <TD>
                             <span className="text-xs whitespace-nowrap">

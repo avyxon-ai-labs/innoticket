@@ -2,7 +2,7 @@ import { useState, useRef, useEffect }  from 'react';
 import { ArrowLeft, Pencil, Paperclip,
          User, Clock, Download,
          MapPin, Layers, CheckCircle2,
-         Tag, Check, X }                from 'lucide-react';
+         Tag, Check, X, AlertTriangle } from 'lucide-react';
 import { Button }                        from '../../../components/ui/Button';
 import { Spinner }                       from '../../../components/ui/Spinner';
 import { TicketStatusBadge }             from './TicketStatusBadge';
@@ -305,6 +305,16 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
                 {formatDuration(ticket.totalDurationInMinutes)}
               </span>
             )}
+            {ticket.escalationLevel && ticket.escalationLevel !== 'NONE' && (
+              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-[6px]
+                               text-[0.65rem] font-bold border
+                               ${ticket.escalationLevel === 'L2'
+                                 ? 'bg-[#FEF2F2] border-[#FECACA] text-[#B91C1C]'
+                                 : 'bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]'}`}>
+                <AlertTriangle size={10} />
+                {ticket.escalationLevel}
+              </span>
+            )}
           </div>
         </div>
       </Card>
@@ -357,20 +367,17 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
               Resolution
             </span>
           </SectionLabel>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
             <UserCard user={ticket.resolvedBy} label="Resolved By" />
             <Field
               label="Resolved At"
               value={ticket.resolvedAt ? formatLocalDateTime(ticket.resolvedAt) : '—'}
             />
-            {ticket.resolvedStage && (
-              <Field label="Stage" value={ticket.resolvedStage} />
-            )}
-            {ticket.resolverRemarks && (
-              <div className="sm:col-span-2 lg:col-span-3 flex flex-col gap-1">
+            {ticket.resolvedRemarks && (
+              <div className="sm:col-span-2 flex flex-col gap-1">
                 <FieldLabel>Remarks</FieldLabel>
                 <p className="text-sm text-[var(--ink)] whitespace-pre-wrap leading-relaxed mt-0.5">
-                  {ticket.resolverRemarks}
+                  {ticket.resolvedRemarks}
                 </p>
               </div>
             )}

@@ -65,6 +65,31 @@ export function formatDuration(minutes: number): string {
 }
 
 /**
+ * Compute how long a ticket has been active since an ISO instant.
+ * Auto-scales: seconds → "Xm", minutes → "Xh Ym", hours → "Xd Yh"
+ * Returns null when activeSince is null/empty.
+ */
+export function formatActiveDuration(activeSinceIso: string | null | undefined): string | null {
+  if (!activeSinceIso) return null;
+  const since  = new Date(
+    activeSinceIso.endsWith('Z') ? activeSinceIso : activeSinceIso + 'Z',
+  ).getTime();
+  const diffMs = Date.now() - since;
+  if (diffMs < 0) return null;
+
+  const totalMins = Math.floor(diffMs / 60_000);
+  const hours     = Math.floor(totalMins / 60);
+  const mins      = totalMins % 60;
+  const days      = Math.floor(hours / 24);
+  const remHours  = hours % 24;
+
+  if (days  > 0) return `${days}d ${remHours > 0 ? `${remHours}h` : ''}`.trim();
+  if (hours > 0) return `${hours}h ${mins > 0 ? `${mins}m` : ''}`.trim();
+  if (totalMins > 0) return `${totalMins}m`;
+  return '<1m';
+}
+
+/**
  * Compute SLA countdown from a deadline ISO string vs now.
  * Returns { label, breached, urgent }
  * - breached: deadline has passed

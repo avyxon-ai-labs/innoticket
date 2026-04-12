@@ -5,9 +5,8 @@ import { Select }                        from '../../../components/ui/Select';
 import { AttachmentUploader }            from './AttachmentUploader';
 import { useRaiseTicket,
          useActiveProjectCodes,
-         useActiveServiceNames,
          useCenterCodesByProjects,
-         useEscalationTypesByService }    from '../hooks';
+         useServiceEscalationGroups }    from '../hooks';
 import { useTicketStore }                from '../store';
 import type { Attachment }               from '../../../services/ticket.service';
 
@@ -53,12 +52,14 @@ export function TicketForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Lookups
-  const { data: projects        = [], isLoading: loadingProjects    } = useActiveProjectCodes();
-  const { data: services        = [], isLoading: loadingServices    } = useActiveServiceNames();
-  const { data: centers         = [], isLoading: loadingCenters     } =
+  const { data: projects       = [], isLoading: loadingProjects } = useActiveProjectCodes();
+  const { data: centers        = [], isLoading: loadingCenters  } =
     useCenterCodesByProjects(form.projectCode ? [form.projectCode] : []);
-  const { data: escalationTypes = [], isLoading: loadingEscalations } =
-    useEscalationTypesByService(form.serviceName || null);
+  const { data: svcGroups      = [], isLoading: loadingServices } = useServiceEscalationGroups();
+
+  // Derived from grouped escalation data
+  const serviceOptions   = svcGroups.map((g) => ({ value: g.serviceName, label: g.serviceName }));
+  const escalationTypes  = svcGroups.find((g) => g.serviceName === form.serviceName)?.escalationTypes ?? [];
 
   function set(field: keyof typeof EMPTY_FORM, value: string) {
     if (field === 'projectCode') {
@@ -200,32 +201,30 @@ export function TicketForm() {
             error={errors.centerCode}
           />
 
-          {/* Service */}
+          {/* Service — unique service names from grouped escalation data */}
           <Select
             label="Service *"
             placeholder={loadingServices ? 'Loading…' : 'Select service…'}
             value={form.serviceName}
             onChange={(v) => set('serviceName', v)}
-            options={services.map((s) => ({ value: s, label: s }))}
+            options={serviceOptions}
             error={errors.serviceName}
           />
 
-          {/* Escalation Type — options filtered by selected service */}
+          {/* Escalation Type — filtered to only types for the selected service */}
           <Select
             label="Escalation Type *"
             placeholder={
               !form.serviceName
                 ? 'Select service first'
-                : loadingEscalations
-                  ? 'Loading…'
-                  : escalationTypes.length === 0
-                    ? 'No types available'
-                    : 'Select escalation type…'
+                : escalationTypes.length === 0
+                  ? 'No types available'
+                  : 'Select escalation type…'
             }
             value={form.escalationType}
             onChange={(v) => set('escalationType', v)}
             options={escalationTypes.map((t) => ({ value: t, label: t }))}
-            disabled={!form.serviceName || loadingEscalations}
+            disabled={!form.serviceName || loadingServices}
             error={errors.escalationType}
           />
         </div>

@@ -15,8 +15,8 @@ export type TicketStatus =
 export type TicketTab = 'ESCALATED' | TicketStatus;
 
 /** Maps each tab to the statuses sent to the API */
-export const TAB_STATUSES: Record<TicketTab, TicketStatus[]> = {
-  ESCALATED:   ['OPEN', 'IN_PROGRESS'],
+export const TAB_STATUSES: Record<TicketTab, string[]> = {
+  ESCALATED:   ['ESCALATED'],
   OPEN:        ['OPEN'],
   IN_PROGRESS: ['IN_PROGRESS'],
   RESOLVED:    ['RESOLVED'],
@@ -73,11 +73,12 @@ export interface TicketResponse {
 
   resolvedBy:      UserMiniDto | null;
   resolvedAt:      string | null;
-  resolvedStage:   string | null;
-  resolverRemarks: string | null;
+  resolvedRemarks: string | null;
 
   totalDurationInMinutes: number | null;
   attachments:            Attachment[];
+  escalationLevel:        string | null;   // e.g. "L1", "L2"; null or "NONE" = not escalated
+  activeSince:            string | null;   // ISO instant; non-null while ticket is active
 
   createdAt: string;
 }
@@ -137,7 +138,7 @@ export interface TicketQueryParams {
   page?:         number;
   size?:         number;
   statuses?:     string; // CSV e.g. "OPEN,IN_PROGRESS"
-  projectCodes?: string; // CSV
+  projectCodes?: string; // CSV (single project enforced in UI)
   centerCodes?:  string; // CSV
   services?:     string; // CSV
   search?:       string;

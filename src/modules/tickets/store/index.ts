@@ -5,10 +5,10 @@ import type { TicketTab } from '../../../services/ticket.service';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface TicketFiltersState {
-  search:       string;
-  projectCodes: string[];
-  centerCodes:  string[];
-  services:     string[];
+  search:      string;
+  projectCode: string;   // single mandatory project
+  centerCodes: string[];
+  services:    string[];
 }
 
 export interface TicketPagination {
@@ -17,7 +17,7 @@ export interface TicketPagination {
 }
 
 const DEFAULT_FILTERS: TicketFiltersState = {
-  search: '', projectCodes: [], centerCodes: [], services: [],
+  search: '', projectCode: '', centerCodes: [], services: [],
 };
 
 // ── Store interface ───────────────────────────────────────────────────────────
@@ -30,10 +30,10 @@ interface TicketUIStore {
 
   setActiveTab:    (tab: TicketTab) => void;
   setSearch:       (v: string) => void;
-  setProjectCodes: (v: string[]) => void;
+  setProjectCode:  (v: string) => void;
   setCenterCodes:  (v: string[]) => void;
   setServices:     (v: string[]) => void;
-  clearFilters:    () => void;
+  clearFilters:    (keepProject?: string) => void;
   setPage:         (p: number) => void;
   setSize:         (s: number) => void;
 
@@ -65,9 +65,9 @@ export const useTicketStore = create<TicketUIStore>()(
           pagination: { ...s.pagination, page: 0 },
         })),
 
-      setProjectCodes: (v) =>
+      setProjectCode: (v) =>
         set((s) => ({
-          filters:    { ...s.filters, projectCodes: v, centerCodes: [] },
+          filters:    { ...s.filters, projectCode: v, centerCodes: [] },
           pagination: { ...s.pagination, page: 0 },
         })),
 
@@ -83,9 +83,9 @@ export const useTicketStore = create<TicketUIStore>()(
           pagination: { ...s.pagination, page: 0 },
         })),
 
-      clearFilters: () =>
+      clearFilters: (keepProject) =>
         set((s) => ({
-          filters:    DEFAULT_FILTERS,
+          filters:    { ...DEFAULT_FILTERS, projectCode: keepProject ?? s.filters.projectCode },
           pagination: { ...s.pagination, page: 0 },
         })),
 
