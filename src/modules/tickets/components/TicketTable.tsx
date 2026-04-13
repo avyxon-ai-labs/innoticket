@@ -1,7 +1,8 @@
 import { useState }                   from 'react';
 import { Eye, RefreshCw,
          ChevronLeft, ChevronRight,
-         Pencil, Clock }              from 'lucide-react';
+         Pencil, Clock, Download }    from 'lucide-react';
+import { TicketExportDialog }         from './TicketExportDialog';
 import { TicketStatusBadge }          from './TicketStatusBadge';
 import { Button }                     from '../../../components/ui/Button';
 import { Select }                     from '../../../components/ui/Select';
@@ -40,10 +41,12 @@ function EscalationChip({ level }: { level: string }) {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE_OPTIONS = [
-  { value: '10',  label: '10 / page' },
-  { value: '20',  label: '20 / page' },
-  { value: '50',  label: '50 / page' },
-  { value: '100', label: '100 / page' },
+  { value: '10',   label: '10 / page'   },
+  { value: '20',   label: '20 / page'   },
+  { value: '50',   label: '50 / page'   },
+  { value: '100',  label: '100 / page'  },
+  { value: '500',  label: '500 / page'  },
+  { value: '1000', label: '1000 / page' },
 ];
 
 // ── Mobile card ───────────────────────────────────────────────────────────────
@@ -140,7 +143,8 @@ export function TicketTable() {
   } = useTicketStore();
 
   const { pushView }  = useNavigationStore();
-  const [refetchKey, setRefetchKey] = useState(0);
+  const [refetchKey,  setRefetchKey]  = useState(0);
+  const [exportOpen,  setExportOpen]  = useState(false);
 
   const projectCode = typeof filters.projectCode === 'string' ? filters.projectCode : '';
   const centerCodes = Array.isArray(filters.centerCodes) ? filters.centerCodes : [];
@@ -311,6 +315,16 @@ export function TicketTable() {
           )}
         </p>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<Download size={13} />}
+            onClick={() => setExportOpen(true)}
+            disabled={rows.length === 0}
+            title="Export to Excel"
+          >
+            Export
+          </Button>
           <Select
             options={PAGE_SIZE_OPTIONS}
             value={String(pagination.size)}
@@ -451,7 +465,8 @@ export function TicketTable() {
                           </TD>
                           <TD>
                             <span className="font-mono text-xs px-2 py-0.5 rounded-md
-                                             bg-[var(--sage-light)] text-[var(--sage)] font-semibold">
+                                             bg-[var(--sage-light)] text-[var(--sage)] font-semibold
+                                             whitespace-nowrap">
                               {t.project.projectCode}
                             </span>
                           </TD>
@@ -459,9 +474,7 @@ export function TicketTable() {
                             <span className="font-mono text-xs">{t.center.centerCode}</span>
                           </TD>
                           <TD>
-                            <span className="text-xs max-w-[130px] block truncate">
-                              {t.center.centerName}
-                            </span>
+                            <span className="text-xs whitespace-nowrap">{t.center.centerName}</span>
                           </TD>
                           <TD>
                             <span className="text-xs">{t.center.state || '—'}</span>
@@ -589,6 +602,13 @@ export function TicketTable() {
           </Button>
         </div>
       )}
+
+      <TicketExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        rows={rows}
+        context={`tickets_${activeTab}`}
+      />
     </div>
   );
 }

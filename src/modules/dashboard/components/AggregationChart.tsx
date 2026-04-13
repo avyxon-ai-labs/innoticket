@@ -1,12 +1,13 @@
-import { useState }            from 'react';
+import { useEffect, useState }   from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
+  Tooltip, ResponsiveContainer, LabelList,
 } from 'recharts';
-import { Loader2, BarChart2, Table2 }  from 'lucide-react';
-import { useDashboardAggregation }     from '../hooks';
-import { useDashboardStore }           from '../store';
-import { cn }                          from '../../../utils';
+import { Loader2, BarChart2, Table2,
+         ChevronLeft, ChevronRight }  from 'lucide-react';
+import { useDashboardAggregation }    from '../hooks';
+import { useDashboardStore }          from '../store';
+import { cn }                         from '../../../utils';
 import type { AggregationDimension,
               DashboardAggregationGroup } from '../../../services/dashboard.service';
 
@@ -19,15 +20,20 @@ const DIMENSIONS: { key: AggregationDimension; label: string }[] = [
 ];
 
 const SERIES = [
-  { key: 'open',        label: 'Open',         color: '#3B82F6' },
-  { key: 'inProgress',  label: 'In Progress',  color: '#7C3AED' },
-  { key: 'escalatedL1', label: 'Esc. L1',      color: '#F59E0B' },
-  { key: 'escalatedL2', label: 'Esc. L2',      color: '#EF4444' },
-  { key: 'resolved',    label: 'Resolved',     color: '#22C55E' },
-  { key: 'closed',      label: 'Closed',       color: '#64748B' },
+  { key: 'open',        label: 'Open',        color: '#3B82F6' },
+  { key: 'inProgress',  label: 'In Progress', color: '#7C3AED' },
+  { key: 'escalatedL1', label: 'Esc. L1',     color: '#F59E0B' },
+  { key: 'escalatedL2', label: 'Esc. L2',     color: '#EF4444' },
+  { key: 'resolved',    label: 'Resolved',    color: '#22C55E' },
+  { key: 'closed',      label: 'Closed',      color: '#64748B' },
 ] as const;
 
 const LIMIT_OPTIONS = [10, 15, 20];
+
+// px allocated per bar group (bar + gap)
+const BAR_SLOT   = 64;
+const CHART_H    = 340;
+const CHART_MARGIN = { top: 28, right: 16, left: 8, bottom: 56 };
 
 // ── Custom tooltip ────────────────────────────────────────────────────────────
 
@@ -41,7 +47,8 @@ function ChartTooltip({ active, payload, label }: {
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px]
                     p-3 shadow-lg shadow-black/10 min-w-[150px]">
-      <p className="text-xs font-bold text-[var(--ink)] mb-1.5 pb-1.5 border-b border-[var(--border)] truncate max-w-[160px]">
+      <p className="text-xs font-bold text-[var(--ink)] mb-1.5 pb-1.5
+                    border-b border-[var(--border)] truncate max-w-[180px]">
         {label}
       </p>
       {payload.filter((p) => p.value > 0).map((p) => (
@@ -54,19 +61,73 @@ function ChartTooltip({ active, payload, label }: {
         </div>
       ))}
       <div className="border-t border-[var(--border)] mt-1.5 pt-1.5 flex justify-between">
-        <span className="text-[0.68rem] text-[var(--ink-light)]">Active</span>
+        <span className="text-[0.68rem] text-[var(--ink-light)]">Total</span>
         <span className="text-[0.68rem] font-bold text-[var(--ink)] tabular-nums">{total}</span>
       </div>
     </div>
   );
 }
 
-function YTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: string } }) {
+// ── X-axis tick — angled, truncated for long codes ────────────────────────────
+
+function XTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: string } }) {
   const label = payload?.value ?? '';
-  const short = label.length > 14 ? label.slice(0, 13) + '…' : label;
+  const short = label.length > 12 ? label.slice(0, 11) + '…' : label;
   return (
-    <text x={x} y={y} dy={4} textAnchor="end" fill="#94A3B8" style={{ fontSize: 10 }}>
-      {short}
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0} y={0} dy={8}
+        textAnchor="end"
+        fill="#94A3B8"
+        fontSize={9}
+        transform="rotate(-38)"
+      >
+        {short}
+      </text>
+    </g>
+  );
+}
+
+// ── Inside-segment label — hides when value is 0 or segment too small ─────────
+
+function SegmentLabel(props: {
+  x?: number; y?: number; width?: number; height?: number; value?: number;
+}) {
+  const { x = 0, y = 0, width = 0, height = 0, value } = props;
+  if (!value || height < 16 || width < 18) return null;
+  return (
+    <text
+      x={x + width / 2}
+      y={y + height / 2}
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fontSize={9}
+      fontWeight="700"
+      fill="rgba(255,255,255,0.92)"
+    >
+      {value}
+    </text>
+  );
+}
+
+// ── Total label on top of the full stacked bar ────────────────────────────────
+
+function TotalLabel(props: {
+  x?: number; y?: number; width?: number; value?: number;
+}) {
+  const { x = 0, y = 0, width = 0, value } = props;
+  if (!value) return null;
+  return (
+    <text
+      x={x + width / 2}
+      y={y - 5}
+      textAnchor="middle"
+      dominantBaseline="auto"
+      fontSize={10}
+      fontWeight="700"
+      fill="var(--ink)"
+    >
+      {value}
     </text>
   );
 }
@@ -102,6 +163,9 @@ function AggregationTable({ data, dimension }: {
   const totalPages = Math.ceil(data.length / PAGE);
   const rows = data.slice(page * PAGE, (page + 1) * PAGE);
   const dimLabel = DIMENSIONS.find((d) => d.key === dimension)?.label ?? 'Group';
+
+  // Reset page when data changes
+  useEffect(() => { setPage(0); }, [data]);
 
   return (
     <div>
@@ -148,11 +212,10 @@ function AggregationTable({ data, dimension }: {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-2.5 py-2 border-t border-[var(--border)]">
           <span className="text-[0.65rem] text-[var(--ink-light)]">
-            {page * PAGE + 1}–{Math.min((page + 1) * PAGE, data.length)} of {data.length}
+            {page * PAGE + 1}–{Math.min((page + 1) * PAGE, data.length)} of {data.length.toLocaleString()}
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -186,8 +249,10 @@ function AggregationTable({ data, dimension }: {
 export function AggregationChart() {
   const { filters, dimension, setDimension } = useDashboardStore();
   const { projectCode, services, escalationTypes, centreCodes } = filters;
-  const [view,  setView]  = useState<'chart' | 'table'>('chart');
-  const [limit, setLimit] = useState(15);
+
+  const [view,       setView]       = useState<'chart' | 'table'>('chart');
+  const [limit,      setLimit]      = useState(15);
+  const [chartPage,  setChartPage]  = useState(0);
 
   const { data: rawData = [], isLoading, isError } = useDashboardAggregation({
     projectCode,
@@ -197,21 +262,31 @@ export function AggregationChart() {
     ...(centreCodes.length     && { centreCodes:     centreCodes.join(',')     }),
   });
 
+  // Reset chart page when dimension, limit, or data source changes
+  useEffect(() => { setChartPage(0); }, [dimension, limit, rawData.length]);
+
   if (!projectCode) return null;
 
-  const chartData = rawData.slice(0, limit);
-  const chartH    = Math.max(220, chartData.length * 34 + 40);
+  const totalChartPages = Math.ceil(rawData.length / limit);
+  const chartData       = rawData.slice(chartPage * limit, (chartPage + 1) * limit);
+
+  // Each bar gets a fixed slot width; chart scrolls horizontally if wider than container
+  const chartWidth = Math.max(360, chartData.length * BAR_SLOT + CHART_MARGIN.left + CHART_MARGIN.right);
+
+  const rangeStart = chartPage * limit + 1;
+  const rangeEnd   = Math.min((chartPage + 1) * limit, rawData.length);
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[16px] overflow-hidden">
+
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3
                       border-b border-[var(--border)]">
         <div>
           <h3 className="text-sm font-bold text-[var(--ink)]">Ticket Distribution</h3>
           <p className="text-xs text-[var(--ink-light)] mt-0.5">
-            {rawData.length} {DIMENSIONS.find((d) => d.key === dimension)?.label.toLowerCase()} groups
-            {view === 'chart' && rawData.length > limit && ` · showing top ${limit}`}
+            {rawData.length.toLocaleString()} {DIMENSIONS.find((d) => d.key === dimension)?.label.toLowerCase()} groups
+            {view === 'chart' && rawData.length > limit && ` · showing ${rangeStart}–${rangeEnd}`}
           </p>
         </div>
 
@@ -235,7 +310,7 @@ export function AggregationChart() {
             ))}
           </div>
 
-          {/* Limit (chart only) */}
+          {/* Bars per page (chart only) */}
           {view === 'chart' && (
             <div className="flex items-center gap-0.5 bg-[var(--ghost)] border border-[var(--border)]
                             rounded-[8px] p-0.5">
@@ -299,7 +374,7 @@ export function AggregationChart() {
       ) : view === 'table' ? (
         <AggregationTable data={rawData} dimension={dimension} />
       ) : (
-        <div className="px-3 py-3">
+        <div className="px-4 pt-3 pb-2">
           {/* Legend */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
             {SERIES.map((s) => (
@@ -310,42 +385,92 @@ export function AggregationChart() {
             ))}
           </div>
 
-          <ResponsiveContainer width="100%" height={chartH}>
-            <BarChart
-              layout="vertical"
-              data={chartData}
-              margin={{ top: 0, right: 12, left: 4, bottom: 0 }}
-              barCategoryGap="28%"
-            >
-              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis
-                type="number"
-                tick={{ fontSize: 10, fill: '#94A3B8' }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => (v === 0 ? '' : String(v))}
-              />
-              <YAxis
-                type="category"
-                dataKey="groupBy"
-                width={100}
-                tick={<YTick />}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-              {SERIES.map((s, i) => (
-                <Bar
-                  key={s.key}
-                  dataKey={s.key}
-                  name={s.label}
-                  stackId="a"
-                  fill={s.color}
-                  radius={i === SERIES.length - 1 ? [0, 3, 3, 0] : [0, 0, 0, 0]}
+          {/* Scrollable chart area — each bar gets a fixed slot, so the SVG grows wide */}
+          <div className="overflow-x-auto">
+            <div style={{ width: chartWidth, height: CHART_H }}>
+              <BarChart
+                width={chartWidth}
+                height={CHART_H}
+                data={chartData}
+                margin={CHART_MARGIN}
+                barCategoryGap="30%"
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  type="category"
+                  dataKey="groupBy"
+                  tick={<XTick />}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
                 />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+                <YAxis
+                  type="number"
+                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={32}
+                  tickFormatter={(v) => (v === 0 ? '0' : String(v))}
+                />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+
+                {SERIES.map((s, i) => {
+                  const isLast = i === SERIES.length - 1;
+                  return (
+                    <Bar
+                      key={s.key}
+                      dataKey={s.key}
+                      name={s.label}
+                      stackId="a"
+                      fill={s.color}
+                      radius={isLast ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                      isAnimationActive={chartData.length <= 100}
+                    >
+                      {/* Count inside each segment */}
+                      <LabelList dataKey={s.key} content={<SegmentLabel />} />
+
+                      {/* Total on top of the full stack — only on the last series */}
+                      {isLast && (
+                        <LabelList dataKey="total" content={<TotalLabel />} />
+                      )}
+                    </Bar>
+                  );
+                })}
+              </BarChart>
+            </div>
+          </div>
+
+          {/* Chart pagination — only shown when data exceeds one page */}
+          {totalChartPages > 1 && (
+            <div className="flex items-center justify-between pt-2 mt-1 border-t border-[var(--border)]">
+              <span className="text-[0.65rem] text-[var(--ink-light)] tabular-nums">
+                {rangeStart}–{rangeEnd} of {rawData.length.toLocaleString()}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  disabled={chartPage === 0}
+                  onClick={() => setChartPage((p) => p - 1)}
+                  className="w-6 h-6 flex items-center justify-center rounded-[6px]
+                             text-[var(--ink-light)] hover:bg-[var(--ghost)]
+                             disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft size={13} />
+                </button>
+                <span className="text-[0.65rem] text-[var(--ink-light)] tabular-nums px-1">
+                  {chartPage + 1} / {totalChartPages}
+                </span>
+                <button
+                  disabled={chartPage >= totalChartPages - 1}
+                  onClick={() => setChartPage((p) => p + 1)}
+                  className="w-6 h-6 flex items-center justify-center rounded-[6px]
+                             text-[var(--ink-light)] hover:bg-[var(--ghost)]
+                             disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

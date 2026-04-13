@@ -22,25 +22,15 @@ export interface JobResponse {
   totalRows:     number;
   processedRows: number;
   message:       string;
-  /** JSON-encoded JobErrorDetail[] or plain string */
-  errorDetails:  string;
+  /** Array of row-level errors, or null when no errors */
+  errorDetails:  JobErrorDetail[] | null;
   fileUrl:       string | null;
-  createdAt:     string; // UTC ISO
-  updatedAt:     string; // UTC ISO
+  createdAt:     string;
+  updatedAt:     string;
   createdBy:     string;
   updatedBy:     string;
 }
 
-/** Safely parse errorDetails — returns structured array or null */
-export function parseErrorDetails(raw: string): JobErrorDetail[] | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as JobErrorDetail[]) : null;
-  } catch {
-    return null;
-  }
-}
 
 export interface JobSearchPayload {
   page:       number;
@@ -72,4 +62,23 @@ export const jobService = {
   /** Bulk delete by IDs */
   deleteBatch: (ids: number[]) =>
     api.post<ApiEnvelope<null>>('/jobs/delete-batch', ids),
+};
+
+// ── Bulk service ──────────────────────────────────────────────────────────────
+
+export type BulkJobType = 'BULK_CENTER_GRID_ADD';
+
+export const bulkService = {
+  /** Download the Excel template for a bulk operation */
+  downloadTemplate: (jobType: BulkJobType) =>
+    api.get(`/bulk/${jobType}/template`, { responseType: 'blob' }),
+
+  /** Upload filled Excel file — returns the initiated JobResponse */
+  upload: (jobType: BulkJobType, file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post<ApiEnvelope<JobResponse>>(`/bulk/${jobType}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };

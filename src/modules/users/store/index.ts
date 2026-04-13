@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { UserResponse, UserStatus } from '../../../services/user.service';
+import type { UserResponse, UserStatus, UserRole } from '../../../services/user.service';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface UserFiltersState {
-  search?: string;
-  status?: UserStatus | '';
+  search?:    string;
+  status?:    UserStatus | '';
+  roleCodes?: UserRole[];
 }
 
 export interface UserPagination {

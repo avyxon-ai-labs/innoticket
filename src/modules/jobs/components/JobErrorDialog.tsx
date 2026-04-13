@@ -1,8 +1,7 @@
-import { XCircle }          from 'lucide-react';
-import { Modal }             from '../../../components/ui/Modal';
-import { Button }            from '../../../components/ui/Button';
-import { parseErrorDetails } from '../../../services/job.service';
-import type { JobResponse }  from '../../../services/job.service';
+import { XCircle }         from 'lucide-react';
+import { Modal }            from '../../../components/ui/Modal';
+import { Button }           from '../../../components/ui/Button';
+import type { JobResponse } from '../../../services/job.service';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -14,7 +13,7 @@ interface Props {
 export function JobErrorDialog({ job, onClose }: Props) {
   if (!job) return null;
 
-  const structured = parseErrorDetails(job.errorDetails);
+  const errors = Array.isArray(job.errorDetails) ? job.errorDetails : [];
 
   return (
     <Modal
@@ -38,8 +37,7 @@ export function JobErrorDialog({ job, onClose }: Props) {
         </div>
       )}
 
-      {/* Structured error table */}
-      {structured ? (
+      {errors.length > 0 ? (
         <div className="rounded-[12px] border border-[var(--border)] overflow-hidden">
           <div className="overflow-x-auto max-h-[380px] overflow-y-auto">
             <table className="w-full min-w-[420px] border-collapse text-sm">
@@ -57,7 +55,7 @@ export function JobErrorDialog({ job, onClose }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {structured.map((err, i) => (
+                {errors.map((err, i) => (
                   <tr
                     key={i}
                     className="border-t border-[var(--border)] hover:bg-[#FEF2F2] transition-colors"
@@ -85,19 +83,14 @@ export function JobErrorDialog({ job, onClose }: Props) {
           </div>
           <div className="px-3 py-2 bg-[var(--ghost)] border-t border-[var(--border)]">
             <p className="text-[0.65rem] text-[var(--ink-light)]">
-              {structured.length} error{structured.length !== 1 ? 's' : ''} found
+              {errors.length} error{errors.length !== 1 ? 's' : ''} found
             </p>
           </div>
         </div>
       ) : (
-        /* Fallback: raw string */
-        job.errorDetails && (
-          <pre className="text-xs text-[#B91C1C] font-mono bg-[#FEF2F2] rounded-[10px]
-                          border border-[#FECACA] p-3 whitespace-pre-wrap leading-relaxed
-                          max-h-[360px] overflow-y-auto">
-            {job.errorDetails}
-          </pre>
-        )
+        <p className="text-sm text-[var(--ink-light)] text-center py-6">
+          No detailed error information available.
+        </p>
       )}
     </Modal>
   );

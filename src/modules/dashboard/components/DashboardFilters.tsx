@@ -96,6 +96,7 @@ export function DashboardFilters() {
         onChange={setCentreCodes}
         loading={loadingCentres}
         disabled={!projectCode}
+        searchable
         wrapClass="w-full sm:w-44"
       />
 

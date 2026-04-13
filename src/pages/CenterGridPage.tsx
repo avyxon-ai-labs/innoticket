@@ -1,5 +1,5 @@
-import { useEffect }              from 'react';
-import { Plus }                   from 'lucide-react';
+import { useEffect, useState }    from 'react';
+import { Plus, Upload }           from 'lucide-react';
 import { Button }                 from '../components/ui/Button';
 import { useNavigationStore }     from '../store/navigationStore';
 import { useCenterGridStore }     from '../modules/configurations/center-grid/store';
@@ -8,10 +8,12 @@ import { CenterGridTable }        from '../modules/configurations/center-grid/co
 import { CenterGridForm }         from '../modules/configurations/center-grid/components/CenterGridForm';
 import { CenterGridDeleteDialog } from '../modules/configurations/center-grid/components/CenterGridDeleteDialog';
 import { CenterGridDetail }       from '../modules/configurations/center-grid/components/CenterGridDetail';
+import { BulkUploadDialog }       from '../modules/configurations/center-grid/components/BulkUploadDialog';
 
 export function CenterGridPage() {
   const { current, resetStack } = useNavigationStore();
   const { openCreate }          = useCenterGridStore();
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   useEffect(() => {
     resetStack({ module: 'center-grid', subView: 'list' });
@@ -42,9 +44,19 @@ export function CenterGridPage() {
             Manage examination centres, CSUP contacts and service escalation mappings.
           </p>
         </div>
-        <Button size="sm" leftIcon={<Plus size={14} />} onClick={openCreate}>
-          New Centre
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            leftIcon={<Upload size={14} />}
+            onClick={() => setBulkOpen(true)}
+          >
+            Bulk Upload
+          </Button>
+          <Button size="sm" leftIcon={<Plus size={14} />} onClick={openCreate}>
+            New Centre
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -58,6 +70,7 @@ export function CenterGridPage() {
       {/* Modals */}
       <CenterGridForm />
       <CenterGridDeleteDialog />
+      <BulkUploadDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>
   );
 }

@@ -77,6 +77,7 @@ export function TicketFilters() {
         onChange={setCenterCodes}
         loading={loadingCenters}
         disabled={!projectCode}
+        searchable
         wrapClass="w-full sm:w-44"
       />
 

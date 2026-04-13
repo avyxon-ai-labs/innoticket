@@ -83,7 +83,7 @@ function SortIcon({
   colKey: string; sortKey?: string; sortDir?: 'asc' | 'desc';
 }) {
   if (sortKey !== colKey)
-    return <ChevronsUpDown size={13} className="text-[var(--border)]" />;
+    return <ChevronsUpDown size={13} className="text-[var(--ink-light)] opacity-50" />;
   return sortDir === 'asc'
     ? <ChevronUp   size={13} className="text-[var(--sage)]" />
     : <ChevronDown size={13} className="text-[var(--sage)]" />;

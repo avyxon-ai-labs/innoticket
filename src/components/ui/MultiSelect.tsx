@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, X }       from 'lucide-react';
-import { cn }                          from '../../utils';
-import { Spinner }                     from './Spinner';
+import { Check, ChevronDown, Search, X } from 'lucide-react';
+import { cn }                            from '../../utils';
+import { Spinner }                       from './Spinner';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -14,6 +14,8 @@ interface MultiSelectProps {
   disabled?:    boolean;
   loading?:     boolean;
   wrapClass?:   string;
+  /** Enables in-dropdown search with selected-first ordering */
+  searchable?:  boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -27,9 +29,12 @@ export function MultiSelect({
   disabled,
   loading,
   wrapClass,
+  searchable = false,
 }: MultiSelectProps) {
-  const [open, setOpen] = useState(false);
-  const containerRef    = useRef<HTMLDivElement>(null);
+  const [open, setOpen]   = useState(false);
+  const [query, setQuery] = useState('');
+  const containerRef      = useRef<HTMLDivElement>(null);
+  const searchRef         = useRef<HTMLInputElement>(null);
 
   // Close on outside click
   useEffect(() => {
@@ -43,15 +48,27 @@ export function MultiSelect({
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Close on ESC
+  // Close on ESC, prevent ESC from bubbling (e.g. closing a modal behind it)
   useEffect(() => {
     if (!open) return;
     function handler(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setOpen(false);
+      }
     }
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    document.addEventListener('keydown', handler, true);
+    return () => document.removeEventListener('keydown', handler, true);
   }, [open]);
+
+  // Auto-focus search when opening; reset query when closing
+  useEffect(() => {
+    if (open && searchable) {
+      // rAF so the DOM node exists before we focus
+      requestAnimationFrame(() => searchRef.current?.focus());
+    }
+    if (!open) setQuery('');
+  }, [open, searchable]);
 
   function toggle(opt: string) {
     onChange(
@@ -66,8 +83,23 @@ export function MultiSelect({
     onChange([]);
   }
 
-  const count = value.length;
+  const count      = value.length;
   const isDisabled = disabled || loading;
+
+  // ── Filtered + sorted display list ────────────────────────────────────────
+  // Selected items always float to the top; then rest filtered by query.
+  const q = query.trim().toLowerCase();
+
+  const displayOptions = searchable
+    ? [
+        ...options.filter((o) => value.includes(o)  && (!q || o.toLowerCase().includes(q))),
+        ...options.filter((o) => !value.includes(o) && (!q || o.toLowerCase().includes(q))),
+      ]
+    : options;
+
+  // Where the boundary between selected and unselected sits in displayOptions
+  const selectedInView  = displayOptions.filter((o) => value.includes(o)).length;
+  const showDivider     = searchable && selectedInView > 0 && selectedInView < displayOptions.length;
 
   // ── Trigger label ─────────────────────────────────────────────────────────
 
@@ -152,7 +184,7 @@ export function MultiSelect({
             <ChevronDown
               size={13}
               className={cn(
-                'text-[var(--ink-light)] transition-transform duration-150',
+                'text-[var(--ink-light)] transition-transform duration-200',
                 open && 'rotate-180',
               )}
             />
@@ -160,56 +192,129 @@ export function MultiSelect({
         </button>
 
         {/* Dropdown */}
-        {open && options.length > 0 && (
+        {open && (
           <div
             role="listbox"
             aria-multiselectable="true"
             className={cn(
               'absolute z-30 top-[calc(100%+4px)] left-0 right-0',
               'bg-[var(--surface)] border border-[var(--border)] rounded-[12px]',
-              'shadow-[var(--shadow-md)] py-1 max-h-52 overflow-y-auto',
+              'shadow-[var(--shadow-md)] overflow-hidden',
+              'animate-[fadeUp_0.15s_ease]',
             )}
           >
-            {options.map((opt) => {
-              const selected = value.includes(opt);
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  onClick={() => toggle(opt)}
-                  className={cn(
-                    'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left',
-                    'transition-colors duration-100 outline-none',
-                    'focus-visible:bg-[var(--ghost)]',
-                    selected
-                      ? 'bg-[var(--sage-light)] text-[var(--sage)]'
-                      : 'text-[var(--ink)] hover:bg-[var(--ghost)]',
-                  )}
-                >
-                  <span
+            {/* Search bar — only when searchable */}
+            {searchable && (
+              <div className="px-2 pt-2 pb-1.5 border-b border-[var(--border)]">
+                <div className="relative flex items-center">
+                  <Search
+                    size={12}
+                    className="absolute left-2.5 text-[var(--ink-light)] pointer-events-none shrink-0"
+                  />
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search centres…"
+                    // Prevent trigger toggle when clicking inside search
+                    onClick={(e) => e.stopPropagation()}
                     className={cn(
-                      'w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0',
-                      selected
-                        ? 'bg-[var(--sage)] border-[var(--sage)]'
-                        : 'border-[var(--border)] bg-[var(--surface)]',
+                      'w-full pl-7 py-1.5 text-xs rounded-[8px]',
+                      'bg-[var(--ghost)] border border-[var(--border)]',
+                      'text-[var(--ink)] placeholder:text-[var(--ink-light)]',
+                      'outline-none transition-colors duration-150',
+                      'focus:border-[var(--sage)] focus:bg-[var(--surface)]',
+                      query ? 'pr-7' : 'pr-2.5',
                     )}
-                  >
-                    {selected && <Check size={9} strokeWidth={3} className="text-white" />}
-                  </span>
-                  <span className="truncate">{opt}</span>
-                </button>
-              );
-            })}
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      onClick={() => { setQuery(''); searchRef.current?.focus(); }}
+                      className="absolute right-2 text-[var(--ink-light)] hover:text-[var(--ink)]
+                                 transition-colors rounded p-0.5"
+                      aria-label="Clear search"
+                      tabIndex={-1}
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Options list */}
+            <div className="py-1 max-h-48 overflow-y-auto overscroll-contain">
+              {displayOptions.length > 0 ? (
+                displayOptions.map((opt, idx) => {
+                  const selected = value.includes(opt);
+                  return (
+                    <div key={opt}>
+                      {/* Divider between selected and unselected groups */}
+                      {showDivider && idx === selectedInView && (
+                        <div className="my-1 mx-2 border-t border-[var(--border)]" />
+                      )}
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        onClick={() => toggle(opt)}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left',
+                          'transition-colors duration-100 outline-none',
+                          'focus-visible:bg-[var(--ghost)]',
+                          selected
+                            ? 'bg-[var(--sage-light)] text-[var(--sage)]'
+                            : 'text-[var(--ink)] hover:bg-[var(--ghost)]',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0',
+                            'transition-colors duration-100',
+                            selected
+                              ? 'bg-[var(--sage)] border-[var(--sage)]'
+                              : 'border-[var(--border)] bg-[var(--surface)]',
+                          )}
+                        >
+                          {selected && <Check size={9} strokeWidth={3} className="text-white" />}
+                        </span>
+                        <span className="truncate">{opt}</span>
+                      </button>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-3 py-4 text-center">
+                  {q ? (
+                    <p className="text-xs text-[var(--ink-light)]">
+                      No centres match{' '}
+                      <span className="font-medium text-[var(--ink)]">"{query}"</span>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[var(--ink-light)]">No options available</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer hint when results are filtered */}
+            {searchable && q && displayOptions.length > 0 && displayOptions.length < options.length && (
+              <div className="px-3 py-1.5 border-t border-[var(--border)]">
+                <p className="text-[0.65rem] text-[var(--ink-light)]">
+                  {displayOptions.length} of {options.length} centres
+                </p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* No options */}
-        {open && options.length === 0 && !loading && (
+        {/* No options (non-searchable path) */}
+        {open && !searchable && options.length === 0 && !loading && (
           <div className="absolute z-30 top-[calc(100%+4px)] left-0 right-0 bg-[var(--surface)]
                           border border-[var(--border)] rounded-[12px] shadow-[var(--shadow-md)]
-                          px-3 py-3 text-center">
+                          px-3 py-3 text-center animate-[fadeUp_0.15s_ease]">
             <p className="text-xs text-[var(--ink-light)]">No options available</p>
           </div>
         )}

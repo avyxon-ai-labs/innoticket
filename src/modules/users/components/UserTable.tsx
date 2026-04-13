@@ -13,9 +13,11 @@ import type { UserFilters }               from '../../../services/user.service';
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE_OPTIONS = [
-  { value: '10',  label: '10 / page'  },
-  { value: '25',  label: '25 / page'  },
-  { value: '50',  label: '50 / page'  },
+  { value: '10',   label: '10 / page'   },
+  { value: '25',   label: '25 / page'   },
+  { value: '50',   label: '50 / page'   },
+  { value: '500',  label: '500 / page'  },
+  { value: '1000', label: '1000 / page' },
 ];
 
 const ROLE_BADGE: Record<string, { bg: string; text: string }> = {
@@ -50,10 +52,13 @@ export function UserTable() {
   const { pushView } = useNavigationStore();
 
   const queryFilters: UserFilters = {
-    page: pagination.page,
-    size: pagination.size,
-    ...(filters.search && { search: filters.search }),
-    ...(filters.status && { status: filters.status }),
+    page:      pagination.page,
+    size:      pagination.size,
+    sort:      sortKey,
+    direction: sortDir,
+    ...(filters.search                  && { search:     filters.search                      }),
+    ...(filters.status                  && { status:     filters.status                      }),
+    ...(filters.roleCodes?.length       && { roleCodes:  filters.roleCodes.join(',')          }),
   };
 
   const { data, isLoading, isFetching, refetch } = useUsers(queryFilters);
@@ -71,15 +76,18 @@ export function UserTable() {
   const columns: Column<UserResponse>[] = [
     {
       key:      'fullName',
-      label:    'Name',
+      label:    'Full Name',
       sortable: true,
       render:   (row) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-[var(--ink)]">{row.fullName}</span>
-          {row.post && (
-            <span className="text-[0.7rem] text-[var(--ink-light)]">{row.post}</span>
-          )}
-        </div>
+        <span className="font-medium text-[var(--ink)] whitespace-nowrap">{row.fullName}</span>
+      ),
+    },
+    {
+      key:      'post',
+      label:    'Post',
+      sortable: true,
+      render:   (row) => (
+        <span className="text-sm text-[var(--ink-mid)] whitespace-nowrap">{row.post || '—'}</span>
       ),
     },
     {

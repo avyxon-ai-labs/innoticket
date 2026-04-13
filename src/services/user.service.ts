@@ -36,10 +36,13 @@ export interface UserPayload {
 }
 
 export interface UserFilters {
-  search?: string;
-  status?: UserStatus | '';
-  page?:   number;   // 0-indexed
-  size?:   number;
+  search?:    string;
+  status?:    UserStatus | '';
+  roleCodes?: string;   // CSV e.g. "ADMIN,CLIENT"
+  page?:      number;   // 0-indexed
+  size?:      number;
+  sort?:      string;
+  direction?: 'asc' | 'desc';
 }
 
 export interface PageResponse<T> {

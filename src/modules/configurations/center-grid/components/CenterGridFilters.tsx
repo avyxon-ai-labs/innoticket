@@ -86,6 +86,7 @@ export function CenterGridFilters() {
             onChange={setCenterCodes}
             loading={loadingCenters}
             disabled={filters.projectCodes.length === 0}
+            searchable
           />
           {filters.projectCodes.length === 0 && (
             <p className="text-[0.65rem] text-[var(--ink-light)] pl-0.5">

@@ -150,26 +150,40 @@ export function ProjectForm() {
 
         {/* SLA Hours */}
         <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="SLA Level 1 (Hours)"
-            type="number"
-            min={0}
-            step={0.5}
-            placeholder="e.g. 4"
-            value={form.slaLevel1Hours === 0 ? '' : form.slaLevel1Hours}
-            onChange={(e) => patch('slaLevel1Hours', Number(e.target.value))}
-            error={errors.slaLevel1Hours}
-          />
-          <Input
-            label="SLA Level 2 (Hours)"
-            type="number"
-            min={0}
-            step={0.5}
-            placeholder="e.g. 8"
-            value={form.slaLevel2Hours === 0 ? '' : form.slaLevel2Hours}
-            onChange={(e) => patch('slaLevel2Hours', Number(e.target.value))}
-            error={errors.slaLevel2Hours}
-          />
+          <div className="flex flex-col gap-1">
+            <Input
+              label="SLA Level 1 (Hours)"
+              type="number"
+              min={0}
+              step={1}
+              placeholder="e.g. 4"
+              value={form.slaLevel1Hours === 0 ? '' : form.slaLevel1Hours}
+              onChange={(e) => patch('slaLevel1Hours', Math.max(0, Math.floor(Number(e.target.value))))}
+              error={errors.slaLevel1Hours}
+            />
+            {form.slaLevel1Hours > 10 && (
+              <p className="text-[0.68rem] text-[#D97706] flex items-center gap-1">
+                ⚠ High SLA threshold — consider if this is intentional.
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <Input
+              label="SLA Level 2 (Hours)"
+              type="number"
+              min={0}
+              step={1}
+              placeholder="e.g. 8"
+              value={form.slaLevel2Hours === 0 ? '' : form.slaLevel2Hours}
+              onChange={(e) => patch('slaLevel2Hours', Math.max(0, Math.floor(Number(e.target.value))))}
+              error={errors.slaLevel2Hours}
+            />
+            {form.slaLevel2Hours > 10 && (
+              <p className="text-[0.68rem] text-[#D97706] flex items-center gap-1">
+                ⚠ High SLA threshold — consider if this is intentional.
+              </p>
+            )}
+          </div>
         </div>
       </form>
     </Modal>

@@ -79,7 +79,7 @@ export function CenterGridTable() {
       sortable: true,
       render:   (row) => (
         <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-[var(--sage-light)]
-                         text-[var(--sage)] font-semibold">
+                         text-[var(--sage)] font-semibold whitespace-nowrap">
           {row.projectCode}
         </span>
       ),
@@ -90,7 +90,7 @@ export function CenterGridTable() {
       sortable: true,
       render:   (row) => (
         <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-[var(--ink)]">{row.centerName}</span>
+          <span className="font-medium text-[var(--ink)] whitespace-nowrap">{row.centerName}</span>
           <span className="font-mono text-[0.68rem] text-[var(--ink-light)]">{row.centerCode}</span>
         </div>
       ),
