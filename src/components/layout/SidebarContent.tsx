@@ -1,6 +1,7 @@
 import { PanelLeftClose } from 'lucide-react';
 import { NAV_ENTRIES, NAV_JOBS } from '../../constants/navigation';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { SidebarItem } from './SidebarItem';
 import { SidebarGroup } from './SidebarGroup';
 import { UserProfile } from './UserProfile';
@@ -15,6 +16,15 @@ interface Props {
 
 export function SidebarContent({ collapsed, onNavClick, hideToggle = false }: Props) {
   const { toggleCollapse } = useUIStore();
+  const user = useAuthStore((s) => s.user);
+  const role    = user?.role?.toUpperCase();
+  const isAdmin  = role === 'ADMIN';
+  const isClient = role === 'CLIENT';
+  const visibleEntries = NAV_ENTRIES.filter((entry) => {
+    if (entry.type === 'group' && entry.adminOnly && !isAdmin) return false;
+    if (entry.type === 'item' && entry.clientHidden && isClient) return false;
+    return true;
+  });
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -80,7 +90,7 @@ export function SidebarContent({ collapsed, onNavClick, hideToggle = false }: Pr
         className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 flex flex-col gap-0.5"
         aria-label="Main navigation"
       >
-        {NAV_ENTRIES.map((entry) =>
+        {visibleEntries.map((entry) =>
           entry.type === 'item' ? (
             <SidebarItem
               key={entry.id}

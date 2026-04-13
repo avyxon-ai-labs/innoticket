@@ -11,7 +11,6 @@ import { CenterGridPage }           from '../pages/CenterGridPage';
 import {
   LoginPage,
   ForgotPasswordPage,
-  ResetPasswordPage,
 } from '../modules/auth';
 
 export const router = createBrowserRouter([
@@ -28,8 +27,6 @@ export const router = createBrowserRouter([
       { path: 'configurations/projects',    element: <ProjectsPage /> },
       { path: 'configurations/services',    element: <ServiceEscalationsPage /> },
       { path: 'configurations/centregrid',  element: <CenterGridPage /> },
-      // Force reset-password inside protected shell so token is already stored
-      { path: 'reset-password', element: <ResetPasswordPage /> },
     ],
   },
 

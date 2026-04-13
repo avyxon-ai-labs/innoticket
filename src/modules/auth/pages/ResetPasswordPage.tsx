@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-import { authService }  from '../../../services/auth.service';
-import { Button }       from '../../../components/ui/Button';
+import { authService }   from '../../../services/auth.service';
+import { useAuthStore }  from '../../../store/authStore';
+import { Button }        from '../../../components/ui/Button';
 import { PasswordInput } from '../components/PasswordInput';
 import { AuthCard }      from '../components/AuthCard';
 
@@ -10,7 +11,8 @@ interface FormState   { oldPassword: string; newPassword: string; confirmPasswor
 interface FieldErrors { oldPassword?: string; newPassword?: string; confirmPassword?: string; }
 
 export function ResetPasswordPage() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const fetchMe   = useAuthStore((s) => s.fetchMe);
   const [form, setForm]         = useState<FormState>({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [fieldErrors, setErrors] = useState<FieldErrors>({});
   const [apiError, setApiError]  = useState('');
@@ -42,8 +44,13 @@ export function ResetPasswordPage() {
     setLoading(true);
     try {
       await authService.resetPassword({ oldPassword: form.oldPassword, newPassword: form.newPassword });
+      // Show success screen first, then clear the flag after the delay.
+      // fetchMe sets isTemporaryPassword=false, which causes ProtectedLayout
+      // to unmount this component — so it must happen after the success UI is shown.
       setSuccess(true);
-      setTimeout(() => navigate('/', { replace: true }), 1800);
+      setTimeout(() => {
+        fetchMe().finally(() => navigate('/', { replace: true }));
+      }, 1800);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message ?? 'Failed to reset password. Please try again.';

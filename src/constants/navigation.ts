@@ -16,6 +16,7 @@ export interface NavLeaf {
   label: string;
   path: string;
   icon: LucideIcon;
+  clientHidden?: boolean;
 }
 
 export interface NavGroup {
@@ -24,6 +25,7 @@ export interface NavGroup {
   label: string;
   icon: LucideIcon;
   children: NavLeaf[];
+  adminOnly?: boolean;
 }
 
 export type NavEntry = NavLeaf | NavGroup;
@@ -43,6 +45,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     label: 'Tickets',
     path: '/tickets',
     icon: Ticket,
+    clientHidden: true,
   },
   {
     type: 'item',
@@ -50,12 +53,14 @@ export const NAV_ENTRIES: NavEntry[] = [
     label: 'User Management',
     path: '/users',
     icon: Users,
+    clientHidden: true,
   },
   {
     type: 'group',
     id: 'configurations',
     label: 'Configurations',
     icon: SlidersHorizontal,
+    adminOnly: true,
     children: [
       {
         type: 'item',

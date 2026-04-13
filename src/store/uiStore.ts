@@ -21,7 +21,7 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       sidebarOpen: false,
       sidebarCollapsed: false,
-      expandedGroups: [],
+      expandedGroups: ['configurations'],
 
       openSidebar: () => set({ sidebarOpen: true }),
       closeSidebar: () => set({ sidebarOpen: false }),
@@ -43,6 +43,18 @@ export const useUIStore = create<UIState>()(
         sidebarCollapsed: s.sidebarCollapsed,
         expandedGroups: s.expandedGroups,
       }),
+      // Always ensure 'configurations' is expanded, even for users with old persisted state
+      merge: (persisted, current) => {
+        const p = persisted as Partial<UIState>;
+        const groups = p.expandedGroups ?? [];
+        return {
+          ...current,
+          ...p,
+          expandedGroups: groups.includes('configurations')
+            ? groups
+            : ['configurations', ...groups],
+        };
+      },
     },
   ),
 );

@@ -33,8 +33,8 @@ export function LoginPage() {
     e.preventDefault();
     if (!validate()) return;
     try {
-      const { isTemporaryPassword } = await login(form);
-      navigate(isTemporaryPassword ? '/reset-password' : '/', { replace: true });
+      await login(form);
+      navigate('/', { replace: true });
     } catch { /* error handled in store */ }
   };
 

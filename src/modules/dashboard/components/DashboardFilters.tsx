@@ -4,6 +4,7 @@ import { Select }             from '../../../components/ui/Select';
 import { MultiSelect }        from '../../../components/ui/MultiSelect';
 import { Button }             from '../../../components/ui/Button';
 import { useDashboardStore }  from '../store';
+import { useAuthStore }       from '../../../store/authStore';
 import {
   useActiveProjectCodes,
   useCenterCodesByProjects,
@@ -18,15 +19,28 @@ export function DashboardFilters() {
 
   const { projectCode, services, escalationTypes, centreCodes } = filters;
 
+  const user      = useAuthStore((s) => s.user);
+  const isClient  = user?.role?.toUpperCase() === 'CLIENT';
+  const clientProject = user?.projectCode ?? '';
+
   const { data: allProjects = [], isLoading: loadingProjects } = useActiveProjectCodes();
   const { data: svcGroups  = [], isLoading: loadingSvc       } = useServiceEscalationGroups();
   const { data: allCentres = [], isLoading: loadingCentres   } =
     useCenterCodesByProjects(projectCode ? [projectCode] : []);
 
-  // Auto-select first project
+  // CLIENT: lock to their assigned project as soon as it is known
   useEffect(() => {
-    if (!projectCode && allProjects.length > 0) setProjectCode(allProjects[0]);
-  }, [allProjects, projectCode, setProjectCode]);
+    if (isClient && clientProject && projectCode !== clientProject) {
+      setProjectCode(clientProject);
+    }
+  }, [isClient, clientProject, projectCode, setProjectCode]);
+
+  // Non-CLIENT: auto-select first project when none is chosen
+  useEffect(() => {
+    if (!isClient && !projectCode && allProjects.length > 0) {
+      setProjectCode(allProjects[0]);
+    }
+  }, [isClient, allProjects, projectCode, setProjectCode]);
 
   const serviceOptions    = svcGroups.map((g) => g.serviceName);
   const availableTypes    = services.length > 0
@@ -38,14 +52,21 @@ export function DashboardFilters() {
 
   return (
     <div className="flex flex-wrap items-end gap-3">
-      {/* Project — mandatory single */}
-      <Select
-        placeholder={loadingProjects ? 'Loading…' : 'Select project…'}
-        value={projectCode}
-        onChange={setProjectCode}
-        options={allProjects.map((p) => ({ value: p, label: p }))}
-        wrapClass="w-full sm:w-48"
-      />
+      {/* Project — locked badge for CLIENT, dropdown for others */}
+      {isClient ? (
+        <div className="flex items-center h-9 px-3 rounded-lg border border-[var(--border)]
+                        bg-[var(--ghost)] text-sm text-[var(--ink)] w-full sm:w-48 select-none">
+          {clientProject || '—'}
+        </div>
+      ) : (
+        <Select
+          placeholder={loadingProjects ? 'Loading…' : 'Select project…'}
+          value={projectCode}
+          onChange={setProjectCode}
+          options={allProjects.map((p) => ({ value: p, label: p }))}
+          wrapClass="w-full sm:w-48"
+        />
+      )}
 
       {/* Services */}
       <MultiSelect

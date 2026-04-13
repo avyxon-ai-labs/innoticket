@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { jwtDecode } from 'jwt-decode';
 import { authService, type LoginRequest } from '../services/auth.service';
+import { userService } from '../services/user.service';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,13 +38,22 @@ export function deriveFullName(email: string): string {
 
 export interface AuthUser {
   /** Login identifier returned by API (email address) */
-  username: string;
+  username:        string;
   /** Human-readable display name derived from username */
-  fullName: string;
+  fullName:        string;
   /** Email — same as username */
-  email:    string;
-  /** Role from API e.g. ADMIN, USER */
-  role:     string;
+  email:           string;
+  /** Role from API e.g. ADMIN, USER, CLIENT */
+  role:            string;
+  // Extended profile fields populated by /users/me
+  id?:                  number;
+  contact?:             string;
+  post?:                string;
+  managerUsername?:     string | null;
+  status?:              string;
+  lastLogin?:           string | null;
+  projectCode?:         string | null;
+  isTemporaryPassword?: boolean;
 }
 
 interface AuthState {
@@ -59,6 +69,8 @@ interface AuthState {
   logout:   () => void;
   /** Called on app boot — invalidates expired token */
   validate: () => boolean;
+  /** Silently refresh profile from /users/me — no-op on error */
+  fetchMe:  () => Promise<void>;
 
   setUser:  (user: AuthUser) => void;
   setToken: (token: string)  => void;
@@ -89,14 +101,18 @@ export const useAuthStore = create<AuthState>()(
             token,
             user: {
               username,
-              email:    username,
-              fullName: deriveFullName(username),
+              email:               username,
+              fullName:            deriveFullName(username),
               role,
+              isTemporaryPassword,
             },
             isAuthenticated: true,
             isLoading:       false,
             error:           null,
           });
+
+          // Enrich profile silently — don't block login on failure
+          get().fetchMe().catch(() => {});
 
           return { isTemporaryPassword };
         } catch (err: unknown) {
@@ -111,6 +127,32 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem(TOKEN_KEY);
         set({ user: null, token: null, isAuthenticated: false, error: null });
+      },
+
+      fetchMe: async () => {
+        try {
+          const res = await userService.getMe();
+          const p = res.data.data;
+          set((s) => ({
+            user: s.user
+              ? {
+                  ...s.user,
+                  fullName:            p.fullName,
+                  role:                p.roleCode,
+                  id:                  p.id,
+                  contact:             p.contact,
+                  post:                p.post,
+                  managerUsername:     p.managerUsername,
+                  status:              p.status,
+                  lastLogin:           p.lastLogin,
+                  projectCode:         p.projectCode,
+                  isTemporaryPassword: p.isTemporaryPassword,
+                }
+              : s.user,
+          }));
+        } catch {
+          // Silent — never surface profile-refresh errors to the user
+        }
       },
 
       validate: () => {

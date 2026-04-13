@@ -17,6 +17,7 @@ export interface UserResponse {
   status:              UserStatus;
   isTemporaryPassword: boolean;
   lastLogin:           string | null;
+  projectCode:         string | null;
   createdAt:           string;
   updatedAt:           string;
   createdBy:           string;
