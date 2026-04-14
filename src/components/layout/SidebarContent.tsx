@@ -21,7 +21,7 @@ export function SidebarContent({ collapsed, onNavClick, hideToggle = false }: Pr
   const isAdmin  = role === 'ADMIN';
   const isClient = role === 'CLIENT';
   const visibleEntries = NAV_ENTRIES.filter((entry) => {
-    if (entry.type === 'group' && entry.adminOnly && !isAdmin) return false;
+    if (entry.adminOnly && !isAdmin) return false;   // group or item: ADMIN only
     if (entry.type === 'item' && entry.clientHidden && isClient) return false;
     return true;
   });
@@ -29,7 +29,7 @@ export function SidebarContent({ collapsed, onNavClick, hideToggle = false }: Pr
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ── Brand ──────────────────────────────────────────────── */}
-      <div className="flex items-center border-b border-[var(--border)] min-h-[var(--header-height)] px-3 py-3">
+      <div className="flex items-center border-b border-[var(--border)] min-h-[56px] px-3 py-3">
         {collapsed ? (
           /* Collapsed: logo IS the expand button — nothing else fits */
           <button

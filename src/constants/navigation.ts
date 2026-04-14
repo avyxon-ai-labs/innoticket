@@ -16,7 +16,8 @@ export interface NavLeaf {
   label: string;
   path: string;
   icon: LucideIcon;
-  clientHidden?: boolean;
+  clientHidden?: boolean;  // hidden for CLIENT role
+  adminOnly?: boolean;     // visible only for ADMIN role
 }
 
 export interface NavGroup {
@@ -53,7 +54,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     label: 'User Management',
     path: '/users',
     icon: Users,
-    clientHidden: true,
+    adminOnly: true,
   },
   {
     type: 'group',

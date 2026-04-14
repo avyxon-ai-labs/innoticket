@@ -64,7 +64,7 @@ export function DashboardFilters() {
           value={projectCode}
           onChange={setProjectCode}
           options={allProjects.map((p) => ({ value: p, label: p }))}
-          wrapClass="w-full sm:w-48"
+          wrapClass="w-full sm:w-[26rem]"
         />
       )}
 

@@ -11,6 +11,7 @@ import { CenterGridPage }           from '../pages/CenterGridPage';
 import {
   LoginPage,
   ForgotPasswordPage,
+  SetPasswordPage,
 } from '../modules/auth';
 
 export const router = createBrowserRouter([
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login',           element: <LoginPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password',  element: <SetPasswordPage /> },
     ],
   },
 

@@ -1,5 +1,7 @@
-import { useState }                        from 'react';
-import { Eye, Pencil, Trash2, RefreshCw } from 'lucide-react';
+import { useState }                           from 'react';
+import { Eye, Pencil, Trash2, RefreshCw,
+         Download }                           from 'lucide-react';
+import { CenterGridExportDialog }             from './CenterGridExportDialog';
 import { Table, type Column }             from '../../../../components/ui/Table';
 import { Button }                         from '../../../../components/ui/Button';
 import { Select }                         from '../../../../components/ui/Select';
@@ -32,6 +34,7 @@ export function CenterGridTable() {
 
   // ── Row selection (local state) ──────────────────────────────────────────
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [exportOpen,   setExportOpen]   = useState(false);
 
   function handleToggleSelect(key: string) {
     setSelectedKeys((prev) => {
@@ -200,6 +203,16 @@ export function CenterGridTable() {
           {isLoading ? 'Loading…' : `${totalElements} centre${totalElements !== 1 ? 's' : ''}`}
         </p>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<Download size={13} />}
+            onClick={() => setExportOpen(true)}
+            disabled={rows.length === 0}
+            title="Export to Excel"
+          >
+            Export
+          </Button>
           <Select
             options={PAGE_SIZE_OPTIONS}
             value={String(pagination.size)}
@@ -237,6 +250,12 @@ export function CenterGridTable() {
         selectedKeys={selectedKeys}
         onToggleSelect={handleToggleSelect}
         onSelectAll={handleSelectAll}
+      />
+
+      <CenterGridExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        rows={rows}
       />
     </div>
   );

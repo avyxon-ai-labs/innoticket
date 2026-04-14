@@ -66,7 +66,7 @@ export function TicketFilters() {
         value={projectCode}
         onChange={setProjectCode}
         options={projectOptions}
-        wrapClass="w-full sm:w-48"
+        wrapClass="w-full sm:w-[26rem]"
       />
 
       {/* Center codes — disabled until project is selected */}

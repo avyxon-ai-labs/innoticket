@@ -12,7 +12,7 @@ interface FieldErrors { oldPassword?: string; newPassword?: string; confirmPassw
 
 export function ResetPasswordPage() {
   const navigate  = useNavigate();
-  const fetchMe   = useAuthStore((s) => s.fetchMe);
+  const logout    = useAuthStore((s) => s.logout);
   const [form, setForm]         = useState<FormState>({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [fieldErrors, setErrors] = useState<FieldErrors>({});
   const [apiError, setApiError]  = useState('');
@@ -49,7 +49,8 @@ export function ResetPasswordPage() {
       // to unmount this component — so it must happen after the success UI is shown.
       setSuccess(true);
       setTimeout(() => {
-        fetchMe().finally(() => navigate('/', { replace: true }));
+        logout();
+        navigate('/login', { replace: true });
       }, 1800);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
@@ -72,7 +73,7 @@ export function ResetPasswordPage() {
               style={{ fontFamily: 'var(--font-display)' }}>
               Password updated!
             </h2>
-            <p className="text-sm text-[var(--ink-light)] mt-1">Redirecting to dashboard…</p>
+            <p className="text-sm text-[var(--ink-light)] mt-1">Redirecting to login…</p>
           </div>
         </div>
       </AuthCard>

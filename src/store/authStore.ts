@@ -111,8 +111,11 @@ export const useAuthStore = create<AuthState>()(
             error:           null,
           });
 
-          // Enrich profile silently — don't block login on failure
-          get().fetchMe().catch(() => {});
+          // Enrich profile silently — skip when temporary password is active
+          // to avoid a race that could wipe the isTemporaryPassword flag.
+          if (!isTemporaryPassword) {
+            get().fetchMe().catch(() => {});
+          }
 
           return { isTemporaryPassword };
         } catch (err: unknown) {
@@ -146,7 +149,9 @@ export const useAuthStore = create<AuthState>()(
                   status:              p.status,
                   lastLogin:           p.lastLogin,
                   projectCode:         p.projectCode,
-                  isTemporaryPassword: p.isTemporaryPassword,
+                  // Preserve an existing `true` flag if the API omits the field
+                  // (some endpoints don't return it, avoid clearing it with undefined)
+                  isTemporaryPassword: p.isTemporaryPassword ?? s.user?.isTemporaryPassword,
                 }
               : s.user,
           }));
