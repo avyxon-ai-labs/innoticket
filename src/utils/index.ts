@@ -65,16 +65,28 @@ export function formatDuration(minutes: number): string {
 }
 
 /**
- * Compute how long a ticket has been active since an ISO instant.
- * Auto-scales: seconds → "Xm", minutes → "Xh Ym", hours → "Xd Yh"
- * Returns null when activeSince is null/empty.
+ * Compute how long a ticket was / has been active.
+ *
+ * Logic:
+ *  - activeSince null/empty          → null (never became active)
+ *  - activeSince set, activeEndedAt null  → diff vs. now (still running)
+ *  - both set                         → diff between the two instants
+ *
+ * Auto-scales: <1m → "Xm" → "Xh Ym" → "Xd Yh"
  */
-export function formatActiveDuration(activeSinceIso: string | null | undefined): string | null {
+export function formatActiveDuration(
+  activeSinceIso:   string | null | undefined,
+  activeEndedAtIso?: string | null,
+): string | null {
   if (!activeSinceIso) return null;
-  const since  = new Date(
-    activeSinceIso.endsWith('Z') ? activeSinceIso : activeSinceIso + 'Z',
-  ).getTime();
-  const diffMs = Date.now() - since;
+
+  const toMs = (iso: string) =>
+    new Date(iso.endsWith('Z') ? iso : iso + 'Z').getTime();
+
+  const sinceMs = toMs(activeSinceIso);
+  const endMs   = activeEndedAtIso ? toMs(activeEndedAtIso) : Date.now();
+  const diffMs  = endMs - sinceMs;
+
   if (diffMs < 0) return null;
 
   const totalMins = Math.floor(diffMs / 60_000);

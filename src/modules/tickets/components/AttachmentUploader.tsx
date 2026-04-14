@@ -59,18 +59,19 @@ export function AttachmentUploader({
 
     setItems((prev) => [...prev, ...newItems]);
 
-    await Promise.all(
+    // Upload all in parallel, collect results, then call onChange once
+    // (avoids stale-closure bug where each callback sees the same old `value`)
+    const results = await Promise.all(
       newItems.map(async (item) => {
         try {
-          const res  = await uploadMut.mutateAsync(item.file);
-          const att  = res.data.data;
-          // Update item to done
+          const res = await uploadMut.mutateAsync(item.file);
+          const att = res.data.data;
           setItems((prev) =>
             prev.map((i) =>
               i.id === item.id ? { ...i, status: 'done', attachment: att } : i,
             ),
           );
-          onChange([...value, att]);
+          return att;
         } catch {
           setItems((prev) =>
             prev.map((i) =>
@@ -79,9 +80,15 @@ export function AttachmentUploader({
                 : i,
             ),
           );
+          return null;
         }
       }),
     );
+
+    const uploaded = results.filter((a): a is Attachment => a !== null);
+    if (uploaded.length > 0) {
+      onChange([...value, ...uploaded]);
+    }
   }
 
   function removeExisting(idx: number) {
@@ -127,14 +134,19 @@ export function AttachmentUploader({
         </div>
       )}
 
+      {/* No `capture` attribute — lets mobile show the full picker:
+          camera, photo library, and file browser. */}
       <input
         ref={inputRef}
         type="file"
         multiple
         accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-        capture="environment"
         className="hidden"
-        onChange={(e) => handleFiles(e.target.files)}
+        onChange={(e) => {
+          handleFiles(e.target.files);
+          // Reset so the same file can be re-selected after removal
+          e.target.value = '';
+        }}
       />
 
       {/* Existing attachments */}

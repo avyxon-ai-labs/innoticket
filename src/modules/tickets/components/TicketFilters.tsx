@@ -78,7 +78,7 @@ export function TicketFilters() {
         loading={loadingCenters}
         disabled={!projectCode}
         searchable
-        wrapClass="w-full sm:w-44"
+        wrapClass="w-full sm:w-[26rem]"
       />
 
       {/* Services */}

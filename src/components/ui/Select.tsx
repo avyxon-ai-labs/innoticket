@@ -2,7 +2,7 @@ import {
   useState, useRef, useEffect, useId,
   type KeyboardEvent,
 }                        from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Search, X } from 'lucide-react';
 import { createPortal }  from 'react-dom';
 import { cn }            from '../../utils';
 
@@ -26,6 +26,8 @@ interface SelectProps {
   wrapClass?:   string;
   className?:   string;
   id?:          string;
+  size?:        'sm' | 'md';
+  searchable?:  boolean;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -42,14 +44,18 @@ export function Select({
   wrapClass,
   className,
   id,
+  size = 'md',
+  searchable = false,
 }: SelectProps) {
   const uid        = useId();
   const selectId   = id ?? uid;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef    = useRef<HTMLUListElement>(null);
+  const searchRef  = useRef<HTMLInputElement>(null);
 
   const [open,    setOpen]    = useState(false);
   const [focused, setFocused] = useState(-1);
+  const [query,   setQuery]   = useState('');
   const [pos,     setPos]     = useState({ top: 0, left: 0, width: 0, openUp: false });
 
   const selected = options.find((o) => o.value === value);
@@ -72,9 +78,19 @@ export function Select({
     if (!open) {
       calcPos();
       setFocused(options.findIndex((o) => o.value === value && !o.disabled));
+      setQuery('');
+    } else {
+      setQuery('');
     }
     setOpen((v) => !v);
   }
+
+  // Auto-focus search input when panel opens
+  useEffect(() => {
+    if (open && searchable) {
+      requestAnimationFrame(() => searchRef.current?.focus());
+    }
+  }, [open, searchable]);
 
   // Select option
   function handleSelect(opt: SelectOption) {
@@ -148,6 +164,16 @@ export function Select({
     return () => { window.removeEventListener('scroll', update, true); window.removeEventListener('resize', update); };
   }, [open]);
 
+  // ── Filtered options (when searchable) ───────────────────────────────────────
+
+  const q               = query.trim().toLowerCase();
+  const visibleOptions  = searchable && q
+    ? options.filter((o) =>
+        o.label.toLowerCase().includes(q) ||
+        o.value.toLowerCase().includes(q),
+      )
+    : options;
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   const panelStyle: React.CSSProperties = pos.openUp
@@ -178,7 +204,8 @@ export function Select({
         aria-expanded={open}
         className={cn(
           'w-full flex items-center justify-between gap-2',
-          'rounded-[10px] border px-3 py-2 text-sm outline-none',
+          'rounded-[10px] border px-3 outline-none',
+          size === 'sm' ? 'h-8 py-1.5 text-xs' : 'h-9 py-2 text-sm',
           'bg-[var(--ghost)] transition-colors duration-150',
           'focus-visible:ring-2 focus-visible:ring-[var(--sage)] focus-visible:ring-offset-1',
           open
@@ -203,52 +230,103 @@ export function Select({
 
       {/* Floating dropdown panel */}
       {open && createPortal(
-        <ul
-          ref={listRef}
-          role="listbox"
-          tabIndex={-1}
-          onKeyDown={handleListKey}
+        <div
           style={panelStyle}
           className={cn(
-            'z-[9999] mt-1 py-1 rounded-[12px] overflow-y-auto',
+            'z-[9999] mt-1 rounded-[12px] overflow-hidden',
             'bg-[var(--surface)] border border-[var(--border)]',
             'shadow-[var(--shadow-md)]',
-            'max-h-56',
             'animate-[modalIn_0.15s_cubic-bezier(0.34,1.4,0.64,1)]',
           )}
         >
-          {options.length === 0 ? (
-            <li className="px-3 py-2 text-xs text-[var(--ink-light)] text-center">No options</li>
-          ) : (
-            options.map((opt, i) => {
-              const isSelected = opt.value === value;
-              const isFocused  = i === focused;
-              return (
-                <li
-                  key={opt.value}
-                  role="option"
-                  aria-selected={isSelected}
-                  aria-disabled={opt.disabled}
-                  onMouseEnter={() => !opt.disabled && setFocused(i)}
-                  onClick={() => handleSelect(opt)}
+          {/* Search bar */}
+          {searchable && (
+            <div className="px-2 pt-2 pb-1.5 border-b border-[var(--border)]">
+              <div className="relative flex items-center">
+                <Search size={12} className="absolute left-2.5 text-[var(--ink-light)] pointer-events-none shrink-0" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => { setQuery(e.target.value); setFocused(0); }}
+                  placeholder="Search…"
+                  onClick={(e) => e.stopPropagation()}
                   className={cn(
-                    'flex items-center justify-between gap-2 px-3 py-2 text-sm cursor-pointer',
-                    'transition-colors duration-100 select-none',
-                    opt.disabled && 'opacity-40 cursor-not-allowed',
-                    isSelected
-                      ? 'bg-[var(--sage-light)] text-[var(--sage)] font-medium'
-                      : isFocused
-                        ? 'bg-[var(--ghost)] text-[var(--ink)]'
-                        : 'text-[var(--ink)]',
+                    'w-full pl-7 py-1.5 text-xs rounded-[8px]',
+                    'bg-[var(--ghost)] border border-[var(--border)]',
+                    'text-[var(--ink)] placeholder:text-[var(--ink-light)]',
+                    'outline-none transition-colors duration-150',
+                    'focus:border-[var(--sage)] focus:bg-[var(--surface)]',
+                    query ? 'pr-7' : 'pr-2.5',
                   )}
-                >
-                  <span className="truncate">{opt.label}</span>
-                  {isSelected && <Check size={13} className="shrink-0 text-[var(--sage)]" />}
-                </li>
-              );
-            })
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => { setQuery(''); searchRef.current?.focus(); }}
+                    className="absolute right-2 text-[var(--ink-light)] hover:text-[var(--ink)]
+                               transition-colors rounded p-0.5"
+                    tabIndex={-1}
+                  >
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+            </div>
           )}
-        </ul>,
+
+          {/* Options list */}
+          <ul
+            ref={listRef}
+            role="listbox"
+            tabIndex={-1}
+            onKeyDown={handleListKey}
+            className="py-1 max-h-56 overflow-y-auto"
+          >
+            {visibleOptions.length === 0 ? (
+              <li className="px-3 py-3 text-xs text-[var(--ink-light)] text-center">
+                {q ? `No results for "${query}"` : 'No options'}
+              </li>
+            ) : (
+              visibleOptions.map((opt, i) => {
+                const isSelected = opt.value === value;
+                const isFocused  = i === focused;
+                return (
+                  <li
+                    key={opt.value}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-disabled={opt.disabled}
+                    onMouseEnter={() => !opt.disabled && setFocused(i)}
+                    onClick={() => handleSelect(opt)}
+                    className={cn(
+                      'flex items-center justify-between gap-2 px-3 py-2 text-sm cursor-pointer',
+                      'transition-colors duration-100 select-none',
+                      opt.disabled && 'opacity-40 cursor-not-allowed',
+                      isSelected
+                        ? 'bg-[var(--sage-light)] text-[var(--sage)] font-medium'
+                        : isFocused
+                          ? 'bg-[var(--ghost)] text-[var(--ink)]'
+                          : 'text-[var(--ink)]',
+                    )}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected && <Check size={13} className="shrink-0 text-[var(--sage)]" />}
+                  </li>
+                );
+              })
+            )}
+          </ul>
+
+          {/* Footer count when search is active */}
+          {searchable && q && visibleOptions.length > 0 && visibleOptions.length < options.length && (
+            <div className="px-3 py-1.5 border-t border-[var(--border)]">
+              <p className="text-[0.65rem] text-[var(--ink-light)]">
+                {visibleOptions.length} of {options.length} options
+              </p>
+            </div>
+          )}
+        </div>,
         document.body,
       )}
 

@@ -368,7 +368,15 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
             </span>
           </SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-            <UserCard user={ticket.resolvedBy} label="Resolved By" />
+            <div className="flex flex-col gap-1">
+              <FieldLabel>Resolved By</FieldLabel>
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-[var(--sage-light)] flex items-center justify-center shrink-0">
+                  <User size={11} className="text-[var(--sage)]" />
+                </div>
+                <span className="text-sm font-mono text-[var(--ink)] break-all">{ticket.resolvedBy}</span>
+              </div>
+            </div>
             <Field
               label="Resolved At"
               value={ticket.resolvedAt ? formatLocalDateTime(ticket.resolvedAt) : '—'}

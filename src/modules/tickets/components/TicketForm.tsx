@@ -192,13 +192,14 @@ export function TicketForm() {
                 ? 'Select project first'
                 : loadingCenters
                   ? 'Loading…'
-                  : 'Select center…'
+                  : 'Search or select center…'
             }
             value={form.centerCode}
             onChange={(v) => set('centerCode', v)}
-            options={centers.map((c) => ({ value: c, label: c }))}
+            options={centers}
             disabled={!form.projectCode || loadingCenters}
             error={errors.centerCode}
+            searchable
           />
 
           {/* Service — unique service names from grouped escalation data */}

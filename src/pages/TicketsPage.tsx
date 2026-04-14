@@ -70,14 +70,23 @@ export function TicketsPage() {
         </div>
       </div>
 
-      {/* Status tabs */}
-      <TicketTabs />
+      {/* Card: tabs + filters + table */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[16px] overflow-hidden flex flex-col">
+        {/* Status tabs */}
+        <div className="px-4 pt-3 pb-0 border-b border-[var(--border)]">
+          <TicketTabs />
+        </div>
 
-      {/* Filters */}
-      <TicketFilters />
+        {/* Filters */}
+        <div className="px-4 pt-4 pb-2">
+          <TicketFilters />
+        </div>
 
-      {/* Table */}
-      <TicketTable />
+        {/* Table (flat — card already provided above) */}
+        <div className="px-4 pb-4">
+          <TicketTable flat />
+        </div>
+      </div>
 
       {/* Modals */}
       <TicketForm />

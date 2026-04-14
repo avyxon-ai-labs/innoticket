@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { centerGridService }                     from '../../../../services/center-grid.service';
 import { serviceEscalationService }              from '../../../../services/service-escalation.service';
 import { projectService }                        from '../../../../services/project.service';
-import type { CenterGridFilters, CenterGridPayload } from '../../../../services/center-grid.service';
+import type { CenterGridFilters, CenterGridPayload, CenterCodeItem } from '../../../../services/center-grid.service';
 
 // ── Query keys ─────────────────────────────────────────────────────────────────
 
@@ -95,6 +95,11 @@ export function useActiveProjectCodes() {
  * Makes one request per project code in parallel, then deduplicates.
  * Disabled when projectCodes is empty.
  */
+/** Truncate a string to `max` chars, appending `…` if longer. */
+function truncateLabel(s: string, max = 30): string {
+  return s.length > max ? s.slice(0, max) + '…' : s;
+}
+
 export function useCenterCodesByProjects(projectCodes: string[] | undefined) {
   const codes = Array.isArray(projectCodes) ? projectCodes : [];
   return useQuery({
@@ -103,8 +108,19 @@ export function useCenterCodesByProjects(projectCodes: string[] | undefined) {
       const results = await Promise.all(
         codes.map((pc) => centerGridService.getCodes(pc)),
       );
-      const all = results.flatMap((r) => r.data.data ?? []);
-      return [...new Set(all)].sort();
+      // Flatten, deduplicate by centerCode, sort by code
+      const seen = new Map<string, CenterCodeItem>();
+      results
+        .flatMap((r) => r.data.data ?? [])
+        .forEach((item) => {
+          if (!seen.has(item.centerCode)) seen.set(item.centerCode, item);
+        });
+      return [...seen.values()]
+        .sort((a, b) => a.centerCode.localeCompare(b.centerCode))
+        .map((item) => ({
+          value: item.centerCode,
+          label: `${item.centerCode} · ${truncateLabel(item.centerName)}`,
+        }));
     },
     enabled:   codes.length > 0,
     staleTime: 1000 * 60 * 2,

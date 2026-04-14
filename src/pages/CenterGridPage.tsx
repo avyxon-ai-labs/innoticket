@@ -33,18 +33,18 @@ export function CenterGridPage() {
   // ── List view ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+    <div className="flex flex-col gap-4">
+
+      {/* ── 1. Title card ───────────────────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] px-5 py-4
+                      flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-[var(--ink)] leading-tight">
-            Centre Grid
-          </h1>
+          <h1 className="text-xl font-bold text-[var(--ink)] leading-tight">Centre Grid</h1>
           <p className="mt-0.5 text-sm text-[var(--ink-light)]">
             Manage examination centres, CSUP contacts and service escalation mappings.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
             variant="outline"
@@ -59,12 +59,14 @@ export function CenterGridPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <CenterGridFilters />
+      {/* ── 2. Filters card ─────────────────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] px-5 py-3">
+        <CenterGridFilters />
+      </div>
 
-      {/* Table */}
-      <div className="flex-1 min-h-0">
-        <CenterGridTable />
+      {/* ── 3. Table card ───────────────────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
+        <CenterGridTable flat />
       </div>
 
       {/* Modals */}

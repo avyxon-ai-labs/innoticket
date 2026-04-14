@@ -77,9 +77,9 @@ function TicketCard({
           {/* Active duration + escalation */}
           {(ticket.activeSince || isEscalated(ticket.escalationLevel)) && (
             <div className="flex items-center gap-1.5 mt-1.5">
-              {formatActiveDuration(ticket.activeSince) && (
+              {formatActiveDuration(ticket.activeSince, ticket.activeEndedAt) && (
                 <span className="text-xs font-semibold text-[var(--ink)] tabular-nums">
-                  {formatActiveDuration(ticket.activeSince)}
+                  {formatActiveDuration(ticket.activeSince, ticket.activeEndedAt)}
                 </span>
               )}
               {isEscalated(ticket.escalationLevel) && (
@@ -136,7 +136,7 @@ function TicketCard({
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function TicketTable() {
+export function TicketTable({ flat = false }: { flat?: boolean }) {
   const {
     activeTab, filters, pagination,
     setPage, setSize, openStatusDialog,
@@ -282,8 +282,10 @@ export function TicketTable() {
 
   if (!projectCode) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-center
-                      bg-[var(--surface)] border border-[var(--border)] rounded-[14px]">
+      <div className={cn(
+        'flex flex-col items-center gap-3 py-16 text-center',
+        !flat && 'bg-[var(--surface)] border border-[var(--border)] rounded-[14px]',
+      )}>
         <div className="w-12 h-12 rounded-[14px] bg-[var(--ghost)] border border-[var(--border)]
                         flex items-center justify-center">
           <Clock size={20} className="text-[var(--ink-light)]" />
@@ -330,12 +332,15 @@ export function TicketTable() {
             value={String(pagination.size)}
             onChange={(v) => setSize(Number(v))}
             wrapClass="w-32"
+            size="sm"
           />
           <button
             onClick={() => { setRefetchKey((k) => k + 1); refetch(); }}
             title="Refresh"
-            className="p-1.5 rounded-[8px] text-[var(--ink-light)] hover:bg-[var(--ghost)]
-                       hover:text-[var(--ink)] transition-colors"
+            className="h-8 w-8 flex items-center justify-center rounded-[8px]
+                       border border-[var(--border)] bg-[var(--ghost)]
+                       text-[#3B82F6] hover:border-[#3B82F6] hover:bg-[#EFF6FF]
+                       transition-colors duration-150 disabled:opacity-40"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
           </button>
@@ -375,7 +380,10 @@ export function TicketTable() {
       </div>
 
       {/* ── Desktop: table ──────────────────────────────────────────────────── */}
-      <div className="hidden sm:block bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
+      <div className={cn(
+        'hidden sm:block overflow-hidden',
+        !flat && 'bg-[var(--surface)] border border-[var(--border)] rounded-[14px]',
+      )}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse" style={{ minWidth: '1400px' }}>
             <thead>
@@ -393,7 +401,7 @@ export function TicketTable() {
                 <TH>Requested By</TH>
                 <TH>Description</TH>
                 <TH>Status</TH>
-                <TH>Resolved By</TH>
+                <TH className="min-w-[12rem]">Resolved By</TH>
                 <TH>Resolved At</TH>
                 <TH>Duration</TH>
                 <TH className="text-right pr-4">Actions</TH>
@@ -444,7 +452,7 @@ export function TicketTable() {
                           <TD>
                             <div className="flex flex-col gap-1">
                               {(() => {
-                                const dur = formatActiveDuration(t.activeSince);
+                                const dur = formatActiveDuration(t.activeSince, t.activeEndedAt);
                                 return dur ? (
                                   <span className="text-xs font-semibold text-[var(--ink)] tabular-nums">
                                     {dur}
@@ -517,18 +525,9 @@ export function TicketTable() {
                           <TD>
                             <TicketStatusBadge status={t.status} />
                           </TD>
-                          <TD>
+                          <TD className="min-w-[12rem]">
                             {t.resolvedBy
-                              ? (
-                                <div className="flex flex-col gap-0.5">
-                                  <span className="text-xs font-medium text-[var(--ink)]">
-                                    {t.resolvedBy.fullName}
-                                  </span>
-                                  <span className="text-[0.65rem] text-[var(--ink-light)]">
-                                    {t.resolvedBy.username}
-                                  </span>
-                                </div>
-                              )
+                              ? <span className="text-xs text-[var(--ink)] font-mono whitespace-nowrap">{t.resolvedBy}</span>
                               : <span className="text-xs text-[var(--ink-light)]">—</span>}
                           </TD>
                           <TD>

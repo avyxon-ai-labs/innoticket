@@ -3,6 +3,11 @@ import type { ApiEnvelope } from './service-escalation.service';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export interface CenterCodeItem {
+  centerCode: string;
+  centerName: string;
+}
+
 export interface CenterGridResponse {
   id:              number;
   projectCode:     string;
@@ -82,9 +87,9 @@ export const centerGridService = {
       params: { projectCode, centerCode, serviceName },
     }),
 
-  /** Returns center codes for a given project code (for filter dropdown) */
+  /** Returns center code + name pairs for a given project code (for filter dropdown) */
   getCodes: (projectCode: string) =>
-    api.get<ApiEnvelope<string[]>>('/center-grids/codes', {
+    api.get<ApiEnvelope<CenterCodeItem[]>>('/center-grids/codes', {
       params: { projectCode },
     }),
 };

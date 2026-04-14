@@ -49,23 +49,22 @@ export function SummaryCards() {
       {/* ── Active stats — 4 cells ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4">
         {ACTIVE.map((stat, i) => {
-          const val    = (s?.[stat.key] as number | undefined) ?? 0;
-          const hot    = stat.alert && val > 0;
-          const isRight = i === 1 || i === 3;     // right half on mobile
-          const smBorderL = i > 0;                // left divider on sm+
+          const val     = (s?.[stat.key] as number | undefined) ?? 0;
+          const hot     = stat.alert && val > 0;
+          const isRight = i % 2 === 1;
+          const smBorderL = i > 0;
 
           return (
             <div
               key={stat.key}
               className={[
                 'flex flex-col gap-1 px-4 py-3 transition-colors duration-200',
-                isRight  ? 'border-l border-[var(--border)]' : '',
-                i >= 2   ? 'border-t border-[var(--border)] sm:border-t-0' : '',
-                smBorderL ? 'sm:border-l sm:border-[var(--border)]' : '',
+                isRight    ? 'border-l border-[var(--border)]' : '',
+                i >= 2     ? 'border-t border-[var(--border)] sm:border-t-0' : '',
+                smBorderL  ? 'sm:border-l sm:border-[var(--border)]' : '',
               ].join(' ')}
               style={hot ? { background: stat.bg } : undefined}
             >
-              {/* Row: dot · label · optional alert badge */}
               <div className="flex items-center gap-1.5">
                 <span
                   className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -85,7 +84,6 @@ export function SummaryCards() {
                 )}
               </div>
 
-              {/* Number */}
               {isLoading
                 ? <div className="h-6 w-10 rounded animate-pulse bg-[var(--border)]" />
                 : (

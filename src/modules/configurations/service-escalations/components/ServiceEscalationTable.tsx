@@ -27,7 +27,7 @@ function sortRows(rows: ServiceEscalation[], key: SortKey, dir: SortDir) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function ServiceEscalationTable() {
+export function ServiceEscalationTable({ flat = false }: { flat?: boolean }) {
   const { filters, openEdit } = useServiceEscalationStore();
 
   const [sortKey, setSortKey] = useState<SortKey>('createdAt');
@@ -121,8 +121,10 @@ export function ServiceEscalationTable() {
           onClick={() => refetch()}
           disabled={isFetching}
           title="Refresh"
-          className="p-1.5 rounded-lg text-[var(--ink-light)] hover:bg-[var(--ghost)]
-                     hover:text-[var(--ink)] transition-colors duration-150 disabled:opacity-40"
+          className="h-8 w-8 flex items-center justify-center rounded-[8px]
+                     border border-[var(--border)] bg-[var(--ghost)]
+                     text-[#3B82F6] hover:border-[#3B82F6] hover:bg-[#EFF6FF]
+                     transition-colors duration-150 disabled:opacity-40"
         >
           <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
         </button>
@@ -143,6 +145,7 @@ export function ServiceEscalationTable() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
+        flat={flat}
       />
     </div>
   );

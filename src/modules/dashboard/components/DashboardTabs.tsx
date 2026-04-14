@@ -1,5 +1,7 @@
-import { cn }              from '../../../utils';
+import { useEffect }        from 'react';
+import { cn }               from '../../../utils';
 import { useDashboardStore } from '../store';
+import { useAuthStore }     from '../../../store/authStore';
 import type { TicketTab }   from '../../../services/ticket.service';
 
 const TABS: { key: TicketTab; label: string; dot: string; activeBg: string; activeText: string }[] = [
@@ -14,10 +16,23 @@ const TABS: { key: TicketTab; label: string; dot: string; activeBg: string; acti
 
 export function DashboardTabs() {
   const { activeTab, setActiveTab } = useDashboardStore();
+
+  const user     = useAuthStore((s) => s.user);
+  const isClient = user?.role?.toUpperCase() === 'CLIENT';
+
+  const visibleTabs = isClient ? TABS.filter((t) => t.key !== 'ESCALATED') : TABS;
+
+  // If CLIENT somehow lands on the ESCALATED tab, switch to OPEN
+  useEffect(() => {
+    if (isClient && activeTab === 'ESCALATED') {
+      setActiveTab('OPEN');
+    }
+  }, [isClient, activeTab, setActiveTab]);
+
   return (
     <div className="overflow-x-auto -mx-1 px-1">
       <div className="flex items-center gap-1 min-w-max">
-        {TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
             <button

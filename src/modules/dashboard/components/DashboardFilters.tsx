@@ -78,15 +78,17 @@ export function DashboardFilters() {
         wrapClass="w-full sm:w-44"
       />
 
-      {/* Escalation types — filtered by selected services */}
-      <MultiSelect
-        placeholder="All escalation types"
-        options={escalationOptions}
-        value={escalationTypes}
-        onChange={setEscalationTypes}
-        disabled={escalationOptions.length === 0}
-        wrapClass="w-full sm:w-48"
-      />
+      {/* Escalation types — hidden for CLIENT */}
+      {!isClient && (
+        <MultiSelect
+          placeholder="All escalation types"
+          options={escalationOptions}
+          value={escalationTypes}
+          onChange={setEscalationTypes}
+          disabled={escalationOptions.length === 0}
+          wrapClass="w-full sm:w-48"
+        />
+      )}
 
       {/* Centre codes — depends on project */}
       <MultiSelect
@@ -97,7 +99,7 @@ export function DashboardFilters() {
         loading={loadingCentres}
         disabled={!projectCode}
         searchable
-        wrapClass="w-full sm:w-44"
+        wrapClass="w-full sm:w-[26rem]"
       />
 
       {hasActive && (

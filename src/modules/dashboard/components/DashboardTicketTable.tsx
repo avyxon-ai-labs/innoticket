@@ -13,6 +13,7 @@ import { cn, formatLocalDateTime,
 import { useNavigationStore }      from '../../../store/navigationStore';
 import { useTickets }              from '../../tickets/hooks';
 import { useDashboardStore }       from '../store';
+import { useAuthStore }            from '../../../store/authStore';
 import {
   TAB_STATUSES,
   STATUS_TRANSITIONS,
@@ -48,10 +49,13 @@ function EscalationChip({ level }: { level: string }) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DashboardTicketTable() {
+export function DashboardTicketTable({ flat = false }: { flat?: boolean }) {
   const {
     filters, activeTab, pagination, setPage, setSize,
   } = useDashboardStore();
+
+  const user     = useAuthStore((s) => s.user);
+  const isClient = user?.role?.toUpperCase() === 'CLIENT';
 
   const { pushView }                = useNavigationStore();
   const [refetchKey,  setRefetchKey]  = useState(0);
@@ -180,11 +184,15 @@ export function DashboardTicketTable() {
             value={String(pagination.size)}
             onChange={(v) => setSize(Number(v))}
             wrapClass="w-32"
+            size="sm"
           />
           <button
             onClick={() => { setRefetchKey((k) => k + 1); refetch(); }}
             title="Refresh"
-            className="p-1.5 rounded-[8px] text-[var(--ink-light)] hover:bg-[var(--ghost)] transition-colors"
+            className="h-8 w-8 flex items-center justify-center rounded-[8px]
+                       border border-[var(--border)] bg-[var(--ghost)]
+                       text-[#3B82F6] hover:border-[#3B82F6] hover:bg-[#EFF6FF]
+                       transition-colors duration-150 disabled:opacity-40"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
           </button>
@@ -192,23 +200,26 @@ export function DashboardTicketTable() {
       </div>
 
       {/* Table */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
+      <div className={cn(
+        'overflow-hidden',
+        !flat && 'bg-[var(--surface)] border border-[var(--border)] rounded-[14px]',
+      )}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse" style={{ minWidth: '1100px' }}>
             <thead>
               <tr className="bg-[var(--ghost)]">
                 <TH>Ticket No.</TH>
-                <TH>Active / Level</TH>
+                {!isClient && <TH>Active / Level</TH>}
                 <TH>Date & Time</TH>
                 <TH>Centre Code</TH>
                 <TH>Centre Name</TH>
                 <TH>State</TH>
                 <TH>Service</TH>
-                <TH>Escalation</TH>
+                {!isClient && <TH>Escalation</TH>}
                 <TH>Raised By</TH>
                 <TH>Description</TH>
                 <TH>Status</TH>
-                <TH>Resolved By</TH>
+                <TH className="min-w-[12rem]">Resolved By</TH>
                 <TH>Resolved At</TH>
                 <TH>Duration</TH>
                 <TH className="text-right pr-4">Actions</TH>
@@ -218,7 +229,7 @@ export function DashboardTicketTable() {
               {isLoading
                 ? Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i} className="border-t border-[var(--border)]">
-                      {Array.from({ length: 15 }).map((__, j) => (
+                      {Array.from({ length: isClient ? 13 : 15 }).map((__, j) => (
                         <td key={j} className="px-3 py-3">
                           <div className="h-3 rounded-md"
                                style={{
@@ -234,7 +245,7 @@ export function DashboardTicketTable() {
                 : rows.length === 0
                   ? (
                     <tr>
-                      <td colSpan={15}>
+                      <td colSpan={isClient ? 13 : 15}>
                         <div className="flex flex-col items-center gap-3 py-14 text-center">
                           <div className="w-10 h-10 rounded-[12px] bg-[var(--ghost)] border border-[var(--border)]
                                           flex items-center justify-center">
@@ -247,8 +258,8 @@ export function DashboardTicketTable() {
                   )
                   : rows.map((t: TicketResponse) => {
                       const canUpdate = !!STATUS_TRANSITIONS[t.status];
-                      const escalated = isEscalated(t.escalationLevel);
-                      const dur       = formatActiveDuration(t.activeSince);
+                      const escalated = !isClient && isEscalated(t.escalationLevel);
+                      const dur       = formatActiveDuration(t.activeSince, t.activeEndedAt);
                       return (
                         <tr
                           key={t.id}
@@ -263,14 +274,16 @@ export function DashboardTicketTable() {
                               #{t.id}
                             </span>
                           </TD>
-                          <TD>
-                            <div className="flex flex-col gap-1">
-                              {dur
-                                ? <span className="text-xs font-semibold text-[var(--ink)] tabular-nums">{dur}</span>
-                                : <span className="text-xs text-[var(--ink-light)]">—</span>}
-                              {escalated && <EscalationChip level={t.escalationLevel!} />}
-                            </div>
-                          </TD>
+                          {!isClient && (
+                            <TD>
+                              <div className="flex flex-col gap-1">
+                                {dur
+                                  ? <span className="text-xs font-semibold text-[var(--ink)] tabular-nums">{dur}</span>
+                                  : <span className="text-xs text-[var(--ink-light)]">—</span>}
+                                {escalated && <EscalationChip level={t.escalationLevel!} />}
+                              </div>
+                            </TD>
+                          )}
                           <TD>
                             <span className="text-xs whitespace-nowrap">{formatLocalDateTime(t.createdAt)}</span>
                           </TD>
@@ -289,9 +302,11 @@ export function DashboardTicketTable() {
                               {t.serviceName}
                             </span>
                           </TD>
-                          <TD>
-                            <span className="text-xs whitespace-nowrap">{t.escalationType}</span>
-                          </TD>
+                          {!isClient && (
+                            <TD>
+                              <span className="text-xs whitespace-nowrap">{t.escalationType}</span>
+                            </TD>
+                          )}
                           <TD>
                             {t.creator
                               ? <div className="flex flex-col gap-0.5">
@@ -306,12 +321,9 @@ export function DashboardTicketTable() {
                           <TD>
                             <TicketStatusBadge status={t.status} />
                           </TD>
-                          <TD>
+                          <TD className="min-w-[12rem]">
                             {t.resolvedBy
-                              ? <div className="flex flex-col gap-0.5">
-                                  <span className="text-xs font-medium text-[var(--ink)]">{t.resolvedBy.fullName}</span>
-                                  <span className="text-[0.65rem] text-[var(--ink-light)]">{t.resolvedBy.username}</span>
-                                </div>
+                              ? <span className="text-xs text-[var(--ink)] font-mono whitespace-nowrap">{t.resolvedBy}</span>
                               : <span className="text-xs text-[var(--ink-light)]">—</span>}
                           </TD>
                           <TD>

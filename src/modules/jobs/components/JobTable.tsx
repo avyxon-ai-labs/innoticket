@@ -172,6 +172,7 @@ export function JobTable() {
             value={String(pagination.size)}
             onChange={(v) => setSize(Number(v))}
             wrapClass="w-32"
+            size="sm"
           />
         </div>
 

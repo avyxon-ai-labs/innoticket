@@ -5,7 +5,7 @@ import { CenterGridExportDialog }             from './CenterGridExportDialog';
 import { Table, type Column }             from '../../../../components/ui/Table';
 import { Button }                         from '../../../../components/ui/Button';
 import { Select }                         from '../../../../components/ui/Select';
-import { formatLocalDateTime }            from '../../../../utils';
+import { cn, formatLocalDateTime }        from '../../../../utils';
 import { useNavigationStore }             from '../../../../store/navigationStore';
 import { useCenterGrids }                 from '../hooks';
 import { useCenterGridStore }             from '../store';
@@ -23,7 +23,7 @@ const PAGE_SIZE_OPTIONS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function CenterGridTable() {
+export function CenterGridTable({ flat = false }: { flat?: boolean }) {
   const {
     filters, pagination, sortKey, sortDir,
     setPage, setSize, setSort,
@@ -197,8 +197,14 @@ export function CenterGridTable() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between px-0.5">
+    <div className="flex flex-col">
+      {/* Toolbar */}
+      <div className={cn(
+        'flex items-center justify-between flex-wrap gap-2',
+        flat
+          ? 'px-4 py-3 border-b border-[var(--border)]'
+          : 'px-0.5 pb-3',
+      )}>
         <p className="text-xs text-[var(--ink-light)]">
           {isLoading ? 'Loading…' : `${totalElements} centre${totalElements !== 1 ? 's' : ''}`}
         </p>
@@ -218,13 +224,16 @@ export function CenterGridTable() {
             value={String(pagination.size)}
             onChange={(val) => setSize(Number(val))}
             wrapClass="w-32"
+            size="sm"
           />
           <button
             onClick={() => refetch()}
             disabled={isFetching}
             title="Refresh"
-            className="p-1.5 rounded-lg text-[var(--ink-light)] hover:bg-[var(--ghost)]
-                       hover:text-[var(--ink)] transition-colors duration-150 disabled:opacity-40"
+            className="h-8 w-8 flex items-center justify-center rounded-[8px]
+                       border border-[var(--border)] bg-[var(--ghost)]
+                       text-[#3B82F6] hover:border-[#3B82F6] hover:bg-[#EFF6FF]
+                       transition-colors duration-150 disabled:opacity-40"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
           </button>
@@ -250,6 +259,7 @@ export function CenterGridTable() {
         selectedKeys={selectedKeys}
         onToggleSelect={handleToggleSelect}
         onSelectAll={handleSelectAll}
+        flat={flat}
       />
 
       <CenterGridExportDialog

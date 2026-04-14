@@ -41,7 +41,7 @@ const PAGE_SIZE_OPTIONS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function ProjectTable() {
+export function ProjectTable({ flat = false }: { flat?: boolean }) {
   const {
     filters, pagination, sortKey, sortDir,
     setPage, setSize, setSort,
@@ -182,6 +182,7 @@ export function ProjectTable() {
             value={String(pagination.size)}
             onChange={(val) => setSize(Number(val))}
             wrapClass="w-32"
+            size="sm"
           />
 
           {/* Refresh */}
@@ -189,8 +190,10 @@ export function ProjectTable() {
             onClick={() => refetch()}
             disabled={isFetching}
             title="Refresh"
-            className="p-1.5 rounded-lg text-[var(--ink-light)] hover:bg-[var(--ghost)]
-                       hover:text-[var(--ink)] transition-colors duration-150 disabled:opacity-40"
+            className="h-8 w-8 flex items-center justify-center rounded-[8px]
+                       border border-[var(--border)] bg-[var(--ghost)]
+                       text-[#3B82F6] hover:border-[#3B82F6] hover:bg-[#EFF6FF]
+                       transition-colors duration-150 disabled:opacity-40"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
           </button>
@@ -212,6 +215,7 @@ export function ProjectTable() {
         pageSize={pagination.size}
         total={totalElements}
         onPageChange={(p) => setPage(p - 1)}   // Table is 1-indexed; API is 0-indexed
+        flat={flat}
       />
     </div>
   );

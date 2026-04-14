@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { jwtDecode } from 'jwt-decode';
 import { authService, type LoginRequest } from '../services/auth.service';
 import { userService } from '../services/user.service';
+import { useDashboardStore } from '../modules/dashboard/store';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -129,6 +130,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         localStorage.removeItem(TOKEN_KEY);
+        // Reset session-only dashboard live mode so it doesn't persist across logins
+        useDashboardStore.getState().setIsLive(false);
         set({ user: null, token: null, isAuthenticated: false, error: null });
       },
 

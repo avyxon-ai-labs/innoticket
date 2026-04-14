@@ -7,6 +7,7 @@ import { Loader2, BarChart2, Table2,
          ChevronLeft, ChevronRight }  from 'lucide-react';
 import { useDashboardAggregation }    from '../hooks';
 import { useDashboardStore }          from '../store';
+import { useAuthStore }               from '../../../store/authStore';
 import { cn }                         from '../../../utils';
 import type { AggregationDimension,
               DashboardAggregationGroup } from '../../../services/dashboard.service';
@@ -154,9 +155,10 @@ const TD = ({ children, right, bold }: { children: React.ReactNode; right?: bool
   </td>
 );
 
-function AggregationTable({ data, dimension }: {
+function AggregationTable({ data, dimension, isClient }: {
   data: DashboardAggregationGroup[];
   dimension: AggregationDimension;
+  isClient: boolean;
 }) {
   const [page, setPage] = useState(0);
   const PAGE = 15;
@@ -176,8 +178,8 @@ function AggregationTable({ data, dimension }: {
               <TH>{dimLabel}</TH>
               <TH right>Open</TH>
               <TH right>In Prog.</TH>
-              <TH right>Esc. L1</TH>
-              <TH right>Esc. L2</TH>
+              {!isClient && <TH right>Esc. L1</TH>}
+              {!isClient && <TH right>Esc. L2</TH>}
               <TH right>Resolved</TH>
               <TH right>Closed</TH>
               <TH right>Total</TH>
@@ -195,12 +197,16 @@ function AggregationTable({ data, dimension }: {
                 <TD right>
                   <span className={r.inProgress > 0 ? 'text-[#7C3AED] font-semibold' : ''}>{r.inProgress || '—'}</span>
                 </TD>
-                <TD right>
-                  <span className={r.escalatedL1 > 0 ? 'text-[#D97706] font-semibold' : ''}>{r.escalatedL1 || '—'}</span>
-                </TD>
-                <TD right>
-                  <span className={r.escalatedL2 > 0 ? 'text-[#DC2626] font-semibold' : ''}>{r.escalatedL2 || '—'}</span>
-                </TD>
+                {!isClient && (
+                  <TD right>
+                    <span className={r.escalatedL1 > 0 ? 'text-[#D97706] font-semibold' : ''}>{r.escalatedL1 || '—'}</span>
+                  </TD>
+                )}
+                {!isClient && (
+                  <TD right>
+                    <span className={r.escalatedL2 > 0 ? 'text-[#DC2626] font-semibold' : ''}>{r.escalatedL2 || '—'}</span>
+                  </TD>
+                )}
                 <TD right>
                   <span className={r.resolved > 0 ? 'text-[#16A34A] font-semibold' : ''}>{r.resolved || '—'}</span>
                 </TD>
@@ -249,6 +255,13 @@ function AggregationTable({ data, dimension }: {
 export function AggregationChart() {
   const { filters, dimension, setDimension } = useDashboardStore();
   const { projectCode, services, escalationTypes, centreCodes } = filters;
+
+  const user     = useAuthStore((s) => s.user);
+  const isClient = user?.role?.toUpperCase() === 'CLIENT';
+
+  const activeSeries = isClient
+    ? SERIES.filter((s) => s.key !== 'escalatedL1' && s.key !== 'escalatedL2')
+    : SERIES;
 
   const [view,       setView]       = useState<'chart' | 'table'>('chart');
   const [limit,      setLimit]      = useState(15);
@@ -372,12 +385,12 @@ export function AggregationChart() {
       ) : rawData.length === 0 ? (
         <p className="text-xs text-center text-[var(--ink-light)] py-10">No data for selected filters.</p>
       ) : view === 'table' ? (
-        <AggregationTable data={rawData} dimension={dimension} />
+        <AggregationTable data={rawData} dimension={dimension} isClient={isClient} />
       ) : (
         <div className="px-4 pt-3 pb-2">
           {/* Legend */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
-            {SERIES.map((s) => (
+            {activeSeries.map((s) => (
               <div key={s.key} className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
                 <span className="text-[0.65rem] text-[var(--ink-light)]">{s.label}</span>
@@ -414,8 +427,8 @@ export function AggregationChart() {
                 />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
 
-                {SERIES.map((s, i) => {
-                  const isLast = i === SERIES.length - 1;
+                {activeSeries.map((s, i) => {
+                  const isLast = i === activeSeries.length - 1;
                   return (
                     <Bar
                       key={s.key}

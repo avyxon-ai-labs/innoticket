@@ -21,6 +21,10 @@ interface DashboardStore {
   activeTab:  TicketTab;
   pagination: { page: number; size: number };
 
+  // ── Session-only (not persisted — resets on logout / page reload) ──
+  isLive:    boolean;
+  setIsLive: (v: boolean) => void;
+
   setProjectCode:     (v: string) => void;
   setServices:        (v: string[]) => void;
   setEscalationTypes: (v: string[]) => void;
@@ -39,6 +43,8 @@ export const useDashboardStore = create<DashboardStore>()(
       dimension:  'centreCode',
       activeTab:  'OPEN',
       pagination: { page: 0, size: 20 },
+      isLive:     false,
+      setIsLive:  (v) => set({ isLive: v }),
 
       setProjectCode: (v) =>
         set((s) => ({

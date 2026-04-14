@@ -27,12 +27,14 @@ export function ProjectsPage() {
         </Button>
       </div>
 
-      {/* ── Filters ─────────────────────────────────────────────────────── */}
-      <ProjectFilters />
-
-      {/* ── Table ───────────────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0">
-        <ProjectTable />
+      {/* ── Card: filters + table ───────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[16px] overflow-hidden flex flex-col flex-1 min-h-0">
+        <div className="px-4 pt-4 pb-2">
+          <ProjectFilters />
+        </div>
+        <div className="px-4 pb-4 flex-1 min-h-0">
+          <ProjectTable flat />
+        </div>
       </div>
 
       {/* ── Modals ──────────────────────────────────────────────────────── */}

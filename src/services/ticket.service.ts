@@ -71,14 +71,15 @@ export interface TicketResponse {
   creator:    UserMiniDto | null;
   assignedTo: UserMiniDto | null;
 
-  resolvedBy:      UserMiniDto | null;
+  resolvedBy:      string | null;          // username / email of the resolver
   resolvedAt:      string | null;
   resolvedRemarks: string | null;
 
   totalDurationInMinutes: number | null;
   attachments:            Attachment[];
   escalationLevel:        string | null;   // e.g. "L1", "L2"; null or "NONE" = not escalated
-  activeSince:            string | null;   // ISO instant; non-null while ticket is active
+  activeSince:            string | null;   // ISO instant; set when ticket becomes active
+  activeEndedAt:          string | null;   // ISO instant; set when ticket is resolved/rejected/withdrawn
 
   createdAt: string;
 }
@@ -180,8 +181,11 @@ export const ticketService = {
   uploadFile: (file: File) => {
     const fd = new FormData();
     fd.append('file', file);
-    return api.post<ApiEnvelope<Attachment>>('/tickets/upload', fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Do NOT set Content-Type manually — the browser must set it so the
+    // multipart boundary token is included (e.g. boundary=----WebKitFormBoundary…).
+    // Overriding it strips the boundary and breaks parsing on the server side,
+    // which is why uploads fail on mobile (Safari/Chrome) but may appear to
+    // work on desktop where servers are more lenient.
+    return api.post<ApiEnvelope<Attachment>>('/tickets/upload', fd);
   },
 };

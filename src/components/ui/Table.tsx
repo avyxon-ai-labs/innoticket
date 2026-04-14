@@ -50,6 +50,10 @@ export interface TableProps<T> {
   onToggleSelect?: (key: string) => void;
   onSelectAll?:    (allKeys: string[]) => void;
 
+  /** When true, removes the outer card wrapper (bg/border/rounded).
+   *  Use when the table is already inside a page-level card. */
+  flat?: boolean;
+
   className?: string;
 }
 
@@ -187,6 +191,7 @@ export function Table<T extends Record<string, unknown>>({
   selectedKeys,
   onToggleSelect,
   onSelectAll,
+  flat = false,
   className,
 }: TableProps<T>) {
 
@@ -224,7 +229,8 @@ export function Table<T extends Record<string, unknown>>({
   return (
     <div
       className={cn(
-        'bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden',
+        'overflow-hidden',
+        !flat && 'bg-[var(--surface)] border border-[var(--border)] rounded-[14px]',
         className,
       )}
     >

@@ -5,8 +5,14 @@ import { Spinner }                       from './Spinner';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/** An option can be a plain string or a { value, label } object. */
+export type MsOption = string | { value: string; label: string };
+
+function optVal(o: MsOption)   { return typeof o === 'string' ? o : o.value; }
+function optLabel(o: MsOption) { return typeof o === 'string' ? o : o.label; }
+
 interface MultiSelectProps {
-  options:      string[];
+  options:      MsOption[];
   value:        string[];
   onChange:     (values: string[]) => void;
   placeholder?: string;
@@ -70,11 +76,12 @@ export function MultiSelect({
     if (!open) setQuery('');
   }, [open, searchable]);
 
-  function toggle(opt: string) {
+  function toggle(opt: MsOption) {
+    const v = optVal(opt);
     onChange(
-      value.includes(opt)
-        ? value.filter((v) => v !== opt)
-        : [...value, opt],
+      value.includes(v)
+        ? value.filter((x) => x !== v)
+        : [...value, v],
     );
   }
 
@@ -92,13 +99,13 @@ export function MultiSelect({
 
   const displayOptions = searchable
     ? [
-        ...options.filter((o) => value.includes(o)  && (!q || o.toLowerCase().includes(q))),
-        ...options.filter((o) => !value.includes(o) && (!q || o.toLowerCase().includes(q))),
+        ...options.filter((o) =>  value.includes(optVal(o)) && (!q || optVal(o).toLowerCase().includes(q) || optLabel(o).toLowerCase().includes(q))),
+        ...options.filter((o) => !value.includes(optVal(o)) && (!q || optVal(o).toLowerCase().includes(q) || optLabel(o).toLowerCase().includes(q))),
       ]
     : options;
 
   // Where the boundary between selected and unselected sits in displayOptions
-  const selectedInView  = displayOptions.filter((o) => value.includes(o)).length;
+  const selectedInView  = displayOptions.filter((o) => value.includes(optVal(o))).length;
   const showDivider     = searchable && selectedInView > 0 && selectedInView < displayOptions.length;
 
   // ── Trigger label ─────────────────────────────────────────────────────────
@@ -115,11 +122,13 @@ export function MultiSelect({
       return <span className="text-[var(--ink-light)] truncate">{placeholder}</span>;
     }
     if (count === 1) {
+      const matchedOpt = options.find((o) => optVal(o) === value[0]);
+      const display    = matchedOpt ? optLabel(matchedOpt) : value[0];
       return (
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="px-1.5 py-0.5 rounded-md bg-[var(--sage-light)] text-[var(--sage)]
                            text-xs font-semibold truncate max-w-[10rem]">
-            {value[0]}
+            {display}
           </span>
         </span>
       );
@@ -248,9 +257,11 @@ export function MultiSelect({
             <div className="py-1 max-h-48 overflow-y-auto overscroll-contain">
               {displayOptions.length > 0 ? (
                 displayOptions.map((opt, idx) => {
-                  const selected = value.includes(opt);
+                  const v        = optVal(opt);
+                  const l        = optLabel(opt);
+                  const selected = value.includes(v);
                   return (
-                    <div key={opt}>
+                    <div key={v}>
                       {/* Divider between selected and unselected groups */}
                       {showDivider && idx === selectedInView && (
                         <div className="my-1 mx-2 border-t border-[var(--border)]" />
@@ -280,7 +291,7 @@ export function MultiSelect({
                         >
                           {selected && <Check size={9} strokeWidth={3} className="text-white" />}
                         </span>
-                        <span className="truncate">{opt}</span>
+                        <span className="truncate">{l}</span>
                       </button>
                     </div>
                   );
