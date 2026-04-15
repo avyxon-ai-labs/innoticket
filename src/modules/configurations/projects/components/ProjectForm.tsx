@@ -21,12 +21,13 @@ const STATUS_OPTIONS = [
 ];
 
 const EMPTY: ProjectPayload = {
-  projectName: '',
-  projectCode: '',
-  username:    '',
-  password:    '',
-  status:      'ACTIVE',
-  services:    [],
+  projectName:  '',
+  projectCode:  '',
+  username:     '',
+  password:     '',
+  status:       'ACTIVE',
+  examEndDate:  '',
+  services:     [],
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -349,12 +350,13 @@ export function ProjectForm() {
   useEffect(() => {
     if (modalMode === 'edit' && editTarget) {
       setForm({
-        projectName: editTarget.projectName,
-        projectCode: editTarget.projectCode,
-        username:    editTarget.username,
-        password:    editTarget.password,
-        status:      editTarget.status,
-        services:    editTarget.services ?? [],
+        projectName:  editTarget.projectName,
+        projectCode:  editTarget.projectCode,
+        username:     editTarget.username,
+        password:     editTarget.password,
+        status:       editTarget.status,
+        examEndDate:  editTarget.examEndDate ?? '',
+        services:     editTarget.services ?? [],
       });
     } else {
       setForm(EMPTY);
@@ -420,11 +422,16 @@ export function ProjectForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
+    // Strip empty optional fields so they're omitted from the JSON body
+    const payload: ProjectPayload = {
+      ...form,
+      examEndDate: form.examEndDate || undefined,
+    };
     try {
       if (modalMode === 'create') {
-        await createMut.mutateAsync(form);
+        await createMut.mutateAsync(payload);
       } else {
-        await updateMut.mutateAsync({ id: editTarget!.id, payload: form });
+        await updateMut.mutateAsync({ id: editTarget!.id, payload });
       }
       closeModal();
     } catch {
@@ -493,13 +500,21 @@ export function ProjectForm() {
           error={errors.password}
         />
 
-        {/* Status */}
-        <Select
-          label="Status"
-          options={STATUS_OPTIONS}
-          value={form.status}
-          onChange={(val) => patch('status', val as ProjectPayload['status'])}
-        />
+        {/* Exam End Date + Status */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Exam End Date"
+            type="date"
+            value={form.examEndDate ?? ''}
+            onChange={(e) => patch('examEndDate', e.target.value || undefined)}
+          />
+          <Select
+            label="Status"
+            options={STATUS_OPTIONS}
+            value={form.status}
+            onChange={(val) => patch('status', val as ProjectPayload['status'])}
+          />
+        </div>
 
         {/* ── Services snapshot ──────────────────────────────────────────── */}
         <div className="space-y-1.5">

@@ -17,27 +17,29 @@ export interface ProjectService {
 }
 
 export interface Project {
-  id:          number;
-  projectName: string;
-  projectCode: string;
-  username:    string;   // system account identifier
-  password:    string;
-  status:      ProjectStatus;
-  services:    ProjectService[];  // snapshotted at creation/update time
-  createdAt:   string;  // UTC ISO
-  updatedAt:   string;  // UTC ISO
-  createdBy:   string;
-  updatedBy:   string;
+  id:           number;
+  projectName:  string;
+  projectCode:  string;
+  username:     string;   // system account identifier
+  password:     string;
+  status:       ProjectStatus;
+  examEndDate?: string;   // optional ISO date, e.g. "2026-12-31"
+  services:     ProjectService[];  // snapshotted at creation/update time
+  createdAt:    string;  // UTC ISO
+  updatedAt:    string;  // UTC ISO
+  createdBy:    string;
+  updatedBy:    string;
 }
 
 /** Body sent on POST / PUT */
 export interface ProjectPayload {
-  projectName: string;
-  projectCode: string;
-  username:    string;
-  password:    string;
-  status:      ProjectStatus;
-  services:    ProjectService[];  // full snapshot — backend persists as-is
+  projectName:  string;
+  projectCode:  string;
+  username:     string;
+  password:     string;
+  status:       ProjectStatus;
+  examEndDate?: string;   // optional ISO date, e.g. "2026-12-31"
+  services:     ProjectService[];  // full snapshot — backend persists as-is
 }
 
 /** Filters accepted by GET /projects */

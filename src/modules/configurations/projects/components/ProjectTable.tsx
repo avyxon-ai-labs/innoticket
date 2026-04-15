@@ -143,6 +143,21 @@ export function ProjectTable({ flat = false }: { flat?: boolean }) {
       ),
     },
     {
+      key:    'examEndDate',
+      label:  'Exam End Date',
+      render: (row) => row.examEndDate
+        ? (
+          <span className="text-xs text-[var(--ink)] whitespace-nowrap tabular-nums">
+            {new Date(row.examEndDate).toLocaleDateString(undefined, {
+              day:   '2-digit',
+              month: 'short',
+              year:  'numeric',
+            })}
+          </span>
+        )
+        : <span className="text-xs text-[var(--ink-light)]">—</span>,
+    },
+    {
       key:    'createdBy',
       label:  'Created By',
       render: (row) => (
