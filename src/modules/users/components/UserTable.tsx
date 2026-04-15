@@ -26,7 +26,12 @@ const ROLE_BADGE: Record<string, { bg: string; text: string }> = {
   CLIENT: { bg: '#F0FDF4', text: '#16A34A' },
 };
 
-// ── Sub-component: Role pill ──────────────────────────────────────────────────
+const GROUP_BADGE: Record<string, { bg: string; text: string }> = {
+  OPS:      { bg: '#EFF6FF', text: '#1D4ED8' },
+  DELIVERY: { bg: '#F0FDF4', text: '#15803D' },
+};
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function RolePill({ role }: { role: string }) {
   const cfg = ROLE_BADGE[role] ?? { bg: 'var(--ghost)', text: 'var(--ink-mid)' };
@@ -36,6 +41,19 @@ function RolePill({ role }: { role: string }) {
       style={{ backgroundColor: cfg.bg, color: cfg.text }}
     >
       {role}
+    </span>
+  );
+}
+
+function GroupPill({ group }: { group: string | null }) {
+  if (!group) return <span className="text-xs text-[var(--ink-light)]">—</span>;
+  const cfg = GROUP_BADGE[group] ?? { bg: 'var(--ghost)', text: 'var(--ink-mid)' };
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.68rem] font-semibold tracking-wide font-mono"
+      style={{ backgroundColor: cfg.bg, color: cfg.text }}
+    >
+      {group}
     </span>
   );
 }
@@ -56,9 +74,9 @@ export function UserTable({ flat = false }: { flat?: boolean }) {
     size:      pagination.size,
     sort:      sortKey,
     direction: sortDir,
-    ...(filters.search                  && { search:     filters.search                      }),
-    ...(filters.status                  && { status:     filters.status                      }),
-    ...(filters.roleCodes?.length       && { roleCodes:  filters.roleCodes.join(',')          }),
+    ...(filters.searchText        && { searchText: filters.searchText             }),
+    ...(filters.status            && { status:     filters.status                 }),
+    ...(filters.roleCodes?.length && { roleCodes:  filters.roleCodes.join(',')    }),
   };
 
   const { data, isLoading, isFetching, refetch } = useUsers(queryFilters);
@@ -109,6 +127,11 @@ export function UserTable({ flat = false }: { flat?: boolean }) {
       key:    'roleCode',
       label:  'Role',
       render: (row) => <RolePill role={row.roleCode} />,
+    },
+    {
+      key:    'userGroup',
+      label:  'Group',
+      render: (row) => <GroupPill group={row.userGroup} />,
     },
     {
       key:    'status',
@@ -174,7 +197,7 @@ export function UserTable({ flat = false }: { flat?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-0.5">
+      <div className="flex items-center justify-between px-4 pt-3">
         <p className="text-xs text-[var(--ink-light)]">
           {isLoading ? 'Loading…' : `${totalElements} user${totalElements !== 1 ? 's' : ''}`}
         </p>

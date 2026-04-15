@@ -100,8 +100,9 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      {/* ── 1. Title card ───────────────────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] px-5 py-4
+                      flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-[var(--ink)] leading-tight">Dashboard</h1>
           <p className="mt-0.5 text-sm text-[var(--ink-light)]">
@@ -120,7 +121,6 @@ export function DashboardPage() {
                 'hover:bg-[#BBF7D0] transition-colors',
               )}
             >
-              {/* Pulsing live dot */}
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full
                                  bg-[#22C55E] opacity-75" />
@@ -144,7 +144,6 @@ export function DashboardPage() {
             </button>
           )}
 
-          {/* Last refreshed timestamp */}
           {lastRefreshed && (
             <span className="text-[0.6rem] text-[var(--ink-light)]">
               Refreshed {lastRefreshed.toLocaleTimeString()}
@@ -153,8 +152,8 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Filters ────────────────────────────────────────────────────────── */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] px-4 py-3">
+      {/* ── 2. Filters card ─────────────────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] px-5 py-3">
         <DashboardFilters />
       </div>
 
@@ -168,7 +167,7 @@ export function DashboardPage() {
       </div>
 
       {/* ── Deep-dive table ────────────────────────────────────────────────── */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[16px] overflow-hidden">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
         <button
           onClick={() => setTableOpen((v) => !v)}
           className="w-full flex items-center justify-between px-4 py-3

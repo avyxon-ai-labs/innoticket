@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { userService }                           from '../../../services/user.service';
 import type { UserFilters, UserPayload }         from '../../../services/user.service';
 
@@ -17,11 +17,12 @@ export const userKeys = {
 
 export function useUsers(filters?: UserFilters) {
   return useQuery({
-    queryKey: userKeys.list(filters),
-    queryFn:  async () => {
+    queryKey:        userKeys.list(filters),
+    queryFn:         async () => {
       const res = await userService.getAll(filters);
       return res.data.data;
     },
+    placeholderData: keepPreviousData, // keeps previous page visible while next page loads
   });
 }
 

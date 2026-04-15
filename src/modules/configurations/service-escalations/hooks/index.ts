@@ -8,11 +8,11 @@ import type {
 // ── Query keys ────────────────────────────────────────────────────────────────
 
 export const seKeys = {
-  all:     ['service-escalations']                        as const,
-  list:    (f?: ServiceEscalationFilters) =>
-             ['service-escalations', 'list', f ?? {}]    as const,
-  detail:  (id: number) =>
-             ['service-escalations', 'detail', id]       as const,
+  all:    ['service-escalations']                        as const,
+  list:   (f?: ServiceEscalationFilters) =>
+            ['service-escalations', 'list', f ?? {}]    as const,
+  detail: (id: number) =>
+            ['service-escalations', 'detail', id]       as const,
 };
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -53,5 +53,13 @@ export function useUpdateServiceEscalation() {
     mutationFn: ({ id, payload }: { id: number; payload: ServiceEscalationPayload }) =>
       serviceEscalationService.update(id, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: seKeys.all }),
+  });
+}
+
+export function useDeleteServiceEscalation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => serviceEscalationService.delete(id),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: seKeys.all }),
   });
 }

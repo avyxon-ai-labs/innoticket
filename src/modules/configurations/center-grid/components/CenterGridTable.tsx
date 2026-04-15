@@ -7,10 +7,9 @@ import { Button }                         from '../../../../components/ui/Button
 import { Select }                         from '../../../../components/ui/Select';
 import { cn, formatLocalDateTime }        from '../../../../utils';
 import { useNavigationStore }             from '../../../../store/navigationStore';
-import { useCenterGrids }                 from '../hooks';
+import { useCenterGridList }              from '../hooks';
 import { useCenterGridStore }             from '../store';
 import type { CenterGridResponse }        from '../../../../services/center-grid.service';
-import type { CenterGridFilters }         from '../../../../services/center-grid.service';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -50,27 +49,22 @@ export function CenterGridTable({ flat = false }: { flat?: boolean }) {
 
   // Normalize — guard against stale non-array persisted data
   const projectCodes = Array.isArray(filters.projectCodes) ? filters.projectCodes : [];
-  const centerCodes  = Array.isArray(filters.centerCodes)  ? filters.centerCodes  : [];
-  const serviceNames = Array.isArray(filters.serviceNames) ? filters.serviceNames : [];
+  const hasProject   = projectCodes.length > 0;
 
-  // Convert arrays → CSV strings expected by the API
-  const queryFilters: CenterGridFilters = {
-    page: pagination.page,
-    size: pagination.size,
-    ...(filters.search             && { search:       filters.search }),
-    ...(projectCodes.length > 0    && { projectCodes: projectCodes.join(',') }),
-    ...(centerCodes.length  > 0    && { centerCodes:  centerCodes.join(',')  }),
-    ...(serviceNames.length > 0    && { serviceNames: serviceNames.join(',') }),
-  };
+  // Server-side filtered + paginated list
+  const { data: page, isLoading, isFetching, refetch } =
+    useCenterGridList(filters, pagination);
 
-  const { data, isLoading, isFetching, refetch } = useCenterGrids(queryFilters);
-
-  const rows          = data?.content       ?? [];
-  const totalElements = data?.totalElements ?? 0;
+  const rows          = page?.content       ?? [];
+  const totalElements = page?.totalElements ?? 0;
   const displayPage   = pagination.page + 1;
 
   function viewDetail(grid: CenterGridResponse) {
-    pushView({ module: 'center-grid', subView: 'detail', selectedId: String(grid.id) });
+    pushView({
+      module:     'center-grid',
+      subView:    'detail',
+      selectedId: String(grid.id),
+    });
   }
 
   // ── Columns ───────────────────────────────────────────────────────────────
@@ -134,7 +128,7 @@ export function CenterGridTable({ flat = false }: { flat?: boolean }) {
       label:  'Services',
       align:  'center',
       render: (row) => {
-        const count = Object.keys(row.serviceMappings).length;
+        const count = row.serviceMappings.length;
         return count > 0 ? (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem]
                            font-semibold bg-[var(--sage-light)] text-[var(--sage)]">
@@ -228,7 +222,7 @@ export function CenterGridTable({ flat = false }: { flat?: boolean }) {
           />
           <button
             onClick={() => refetch()}
-            disabled={isFetching}
+            disabled={isFetching || !hasProject}
             title="Refresh"
             className="h-8 w-8 flex items-center justify-center rounded-[8px]
                        border border-[var(--border)] bg-[var(--ghost)]
@@ -240,27 +234,36 @@ export function CenterGridTable({ flat = false }: { flat?: boolean }) {
         </div>
       </div>
 
-      <Table
-        data={rows}
-        columns={columns}
-        keyExtractor={(row) => String(row.id)}
-        loading={isLoading}
-        skeletonRows={8}
-        emptyTitle="No centre grids found"
-        emptyDescription="Create a centre grid to map services to examination centres."
-        sortKey={sortKey}
-        sortDir={sortDir}
-        onSort={(key, dir) => { setSort(key, dir); setPage(0); }}
-        page={displayPage}
-        pageSize={pagination.size}
-        total={totalElements}
-        onPageChange={(p) => { setPage(p - 1); setSelectedKeys(new Set()); }}
-        onRowClick={viewDetail}
-        selectedKeys={selectedKeys}
-        onToggleSelect={handleToggleSelect}
-        onSelectAll={handleSelectAll}
-        flat={flat}
-      />
+      {!hasProject && !isLoading && (
+        <div className="rounded-[12px] border border-dashed border-[var(--border)] px-6 py-10 text-center">
+          <p className="text-sm font-medium text-[var(--ink-mid)]">Select a project to view its centres</p>
+          <p className="text-xs text-[var(--ink-light)] mt-1">Use the Project filter above to get started.</p>
+        </div>
+      )}
+
+      {hasProject && (
+        <Table
+          data={rows}
+          columns={columns}
+          keyExtractor={(row) => String(row.id)}
+          loading={isLoading}
+          skeletonRows={8}
+          emptyTitle="No centre grids found"
+          emptyDescription="Create a centre grid to map services to examination centres."
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={(key, dir) => { setSort(key, dir); setPage(0); }}
+          page={displayPage}
+          pageSize={pagination.size}
+          total={totalElements}
+          onPageChange={(p) => { setPage(p - 1); setSelectedKeys(new Set()); }}
+          onRowClick={viewDetail}
+          selectedKeys={selectedKeys}
+          onToggleSelect={handleToggleSelect}
+          onSelectAll={handleSelectAll}
+          flat={flat}
+        />
+      )}
 
       <CenterGridExportDialog
         open={exportOpen}

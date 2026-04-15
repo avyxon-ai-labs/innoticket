@@ -16,16 +16,16 @@ const STATUS_OPTIONS = [
 export function UserFilters() {
   const { filters, setFilter, clearFilters } = useUserStore();
   const hasActive =
-    !!filters.search ||
-    !!filters.status ||
+    !!filters.searchText ||
+    !!filters.status     ||
     (filters.roleCodes?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-wrap items-end gap-3">
       <Input
         placeholder="Search name, username, contact…"
-        value={filters.search ?? ''}
-        onChange={(e) => setFilter('search', e.target.value)}
+        value={filters.searchText ?? ''}
+        onChange={(e) => setFilter('searchText', e.target.value)}
         leftIcon={<Search size={14} />}
         wrapClass="w-64"
       />

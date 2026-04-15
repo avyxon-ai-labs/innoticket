@@ -8,7 +8,7 @@ import { useAuthStore }       from '../../../store/authStore';
 import {
   useActiveProjectCodes,
   useCenterCodesByProjects,
-  useServiceEscalationGroups,
+  useProjectServiceGroups,
 } from '../hooks';
 
 export function DashboardFilters() {
@@ -24,7 +24,9 @@ export function DashboardFilters() {
   const clientProject = user?.projectCode ?? '';
 
   const { data: allProjects = [], isLoading: loadingProjects } = useActiveProjectCodes();
-  const { data: svcGroups  = [], isLoading: loadingSvc       } = useServiceEscalationGroups();
+  // Services + escalation types scoped to the selected project
+  const { data: svcGroups  = [], isLoading: loadingSvc       } =
+    useProjectServiceGroups(projectCode || undefined);
   const { data: allCentres = [], isLoading: loadingCentres   } =
     useCenterCodesByProjects(projectCode ? [projectCode] : []);
 
@@ -68,27 +70,26 @@ export function DashboardFilters() {
         />
       )}
 
-      {/* Services */}
+      {/* Services — scoped to selected project */}
       <MultiSelect
-        placeholder="All services"
+        placeholder={!projectCode ? 'Select project first' : 'All services'}
         options={serviceOptions}
         value={services}
         onChange={setServices}
         loading={loadingSvc}
+        disabled={!projectCode}
         wrapClass="w-full sm:w-44"
       />
 
-      {/* Escalation types — hidden for CLIENT */}
-      {!isClient && (
-        <MultiSelect
-          placeholder="All escalation types"
-          options={escalationOptions}
-          value={escalationTypes}
-          onChange={setEscalationTypes}
-          disabled={escalationOptions.length === 0}
-          wrapClass="w-full sm:w-48"
-        />
-      )}
+      {/* Escalation types */}
+      <MultiSelect
+        placeholder="All escalation types"
+        options={escalationOptions}
+        value={escalationTypes}
+        onChange={setEscalationTypes}
+        disabled={escalationOptions.length === 0}
+        wrapClass="w-full sm:w-48"
+      />
 
       {/* Centre codes — depends on project */}
       <MultiSelect

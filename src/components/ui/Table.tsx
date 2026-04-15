@@ -219,7 +219,7 @@ export function Table<T extends Record<string, unknown>>({
   };
 
   const showPagination =
-    page !== undefined && total !== undefined && onPageChange && total > pageSize;
+    page !== undefined && total !== undefined && onPageChange !== undefined;
 
   const alignClass = { left: 'text-left', center: 'text-center', right: 'text-right' };
 

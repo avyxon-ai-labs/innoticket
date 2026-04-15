@@ -1,6 +1,7 @@
 import { useQuery }          from '@tanstack/react-query';
 import { dashboardService }  from '../../../services/dashboard.service';
 import { serviceEscalationService } from '../../../services/service-escalation.service';
+import { centerGridService } from '../../../services/center-grid.service';
 import type { DashboardSummaryParams,
               DashboardAggregationParams } from '../../../services/dashboard.service';
 import {
@@ -66,6 +67,34 @@ export function useServiceEscalationGroups() {
       return groups.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
     },
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * Fetches services enabled for a specific project via
+ * GET /api/projects/services?projectCode={projectCode}
+ * and groups them into [{ serviceName, escalationTypes[] }].
+ * Disabled when projectCode is falsy; staleTime: 0 so a fresh
+ * fetch occurs whenever the selected project changes.
+ */
+export function useProjectServiceGroups(projectCode: string | undefined) {
+  return useQuery({
+    queryKey: ['projects', 'services', 'grouped', projectCode ?? ''],
+    queryFn:  async () => {
+      const res = await centerGridService.getProjectServices(projectCode!);
+      const map = new Map<string, Set<string>>();
+      for (const item of res.data.data ?? []) {
+        if (!map.has(item.serviceName)) map.set(item.serviceName, new Set());
+        map.get(item.serviceName)!.add(item.escalationType);
+      }
+      const groups: ServiceEscalationGroup[] = [];
+      for (const [svc, types] of map)
+        groups.push({ serviceName: svc, escalationTypes: [...types].sort() });
+      return groups.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
+    },
+    enabled:  !!projectCode,
+    staleTime: 0,
+    gcTime:   5 * 60_000,
   });
 }
 

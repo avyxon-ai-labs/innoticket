@@ -22,9 +22,10 @@ export function CenterGridPage() {
   // ── Detail sub-view ────────────────────────────────────────────────────────
 
   if (current?.module === 'center-grid' && current.subView === 'detail' && current.selectedId) {
+    const id = Number(current.selectedId);
     return (
       <>
-        <CenterGridDetail gridId={Number(current.selectedId)} />
+        <CenterGridDetail id={id} />
         <CenterGridForm />
       </>
     );
@@ -72,7 +73,15 @@ export function CenterGridPage() {
       {/* Modals */}
       <CenterGridForm />
       <CenterGridDeleteDialog />
-      <BulkUploadDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
+      <BulkUploadDialog
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        jobType="BULK_CENTER_GRID_ADD"
+        title="Bulk Upload — Centre Grid"
+        subtitle="Upload an Excel file to create or update multiple centres at once."
+        templateFileName="centre_grid_template.xlsx"
+        doneMessage="✓ Centre data updated."
+      />
     </div>
   );
 }

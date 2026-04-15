@@ -1,148 +1,133 @@
-import { Plus, Trash2 }  from 'lucide-react';
-import { cn }            from '../../../../utils';
+import { cn } from '../../../../utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface MappingRow {
-  id:      string; // local key for React
-  service: string;
-  email:   string;
+  id:            string; // local React key only
+  service:       string;
+  deliveryAgent: string; // username of DELIVERY-group agent (optional)
+  opsAgent:      string; // username of OPS-group agent (optional)
 }
 
 interface Props {
-  rows:              MappingRow[];
-  onChange:          (rows: MappingRow[]) => void;
-  availableServices: string[];
-  errors?:           Record<string, string>; // keyed by row.id
-  disabled?:         boolean;
+  rows:     MappingRow[];
+  onChange: (rows: MappingRow[]) => void;
+  disabled?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function ServiceMappingEditor({
-  rows,
-  onChange,
-  availableServices,
-  errors = {},
-  disabled,
-}: Props) {
-  const selectedServices = new Set(rows.map((r) => r.service));
+/**
+ * Renders all project services as a fixed grid.
+ * Delivery / OPS agent inputs are optional — rows are always saved.
+ * The parent drives `rows` by syncing from available project services.
+ */
+export function ServiceMappingEditor({ rows, onChange, disabled }: Props) {
 
-  function addRow() {
-    onChange([
-      ...rows,
-      { id: crypto.randomUUID(), service: '', email: '' },
-    ]);
-  }
-
-  function removeRow(id: string) {
-    onChange(rows.filter((r) => r.id !== id));
-  }
-
-  function patchRow(id: string, field: 'service' | 'email', value: string) {
+  function patchRow(id: string, field: 'deliveryAgent' | 'opsAgent', value: string) {
     onChange(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   }
 
+  const filledCount = rows.filter((r) => r.deliveryAgent || r.opsAgent).length;
+
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-col gap-2">
+        <span className="text-[0.68rem] font-semibold text-[var(--ink-mid)] tracking-wide uppercase">
+          Service Mappings
+        </span>
+        <div className="rounded-[10px] border border-dashed border-[var(--border)] px-4 py-5 text-center">
+          <p className="text-xs text-[var(--ink-light)]">
+            Select a project to load its services.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Label row */}
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-[0.68rem] font-semibold text-[var(--ink-mid)] tracking-wide uppercase">
           Service Mappings
         </span>
-        <button
-          type="button"
-          onClick={addRow}
-          disabled={disabled}
-          className="inline-flex items-center gap-1 text-xs font-medium text-[var(--sage)]
-                     hover:text-[var(--sage-dark)] disabled:opacity-40 transition-colors"
-        >
-          <Plus size={13} />
-          Add Service
-        </button>
+        <span className="text-[0.65rem] text-[var(--ink-light)]">
+          {filledCount} / {rows.length} assigned
+        </span>
       </div>
 
-      {/* Empty state */}
-      {rows.length === 0 && (
-        <div className="rounded-[10px] border border-dashed border-[var(--border)] px-4 py-5 text-center">
-          <p className="text-xs text-[var(--ink-light)]">
-            No services mapped. Click "Add Service" to begin.
-          </p>
-        </div>
-      )}
+      {/* Column labels */}
+      <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-2 px-1">
+        <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-[var(--ink-light)]">
+          Service
+        </span>
+        <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-[#15803D]">
+          Delivery Agent
+        </span>
+        <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-[#1D4ED8]">
+          OPS Agent
+        </span>
+      </div>
 
       {/* Rows */}
-      {rows.map((row) => {
-        // Available options: all services minus already-selected ones, but keep current row's value
-        const options = availableServices.filter(
-          (s) => !selectedServices.has(s) || s === row.service,
-        );
-        const rowError = errors[row.id];
+      <div className="flex flex-col divide-y divide-[var(--border)] rounded-[12px]
+                      border border-[var(--border)] overflow-hidden">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className="grid grid-cols-[1.1fr_1fr_1fr] gap-2 items-center
+                       px-3 py-2 bg-[var(--surface)] first:pt-3 last:pb-3"
+          >
+            {/* Service name — read-only badge */}
+            <span className={cn(
+              'inline-flex items-center px-2 py-1 rounded-[6px] text-xs font-semibold',
+              'bg-[var(--sage-light)] text-[var(--sage)] font-mono tracking-wide truncate w-fit max-w-full',
+            )}>
+              {row.service}
+            </span>
 
-        return (
-          <div key={row.id} className="flex flex-col gap-1">
-            <div className="flex gap-2 items-start">
-              {/* Service name select */}
-              <div className="flex-1 relative">
-                <select
-                  value={row.service}
-                  onChange={(e) => patchRow(row.id, 'service', e.target.value)}
-                  disabled={disabled}
-                  className={cn(
-                    'w-full appearance-none rounded-[10px] border bg-[var(--ghost)]',
-                    'px-3 py-2 text-sm text-[var(--ink)] outline-none',
-                    'focus:border-[var(--sage)] focus:bg-[var(--surface)]',
-                    'disabled:opacity-50 disabled:cursor-not-allowed transition-colors',
-                    rowError ? 'border-[var(--red)]' : 'border-[var(--border)]',
-                  )}
-                >
-                  <option value="" disabled>Select service…</option>
-                  {options.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Delivery agent username */}
+            <input
+              type="text"
+              placeholder="delivery username"
+              value={row.deliveryAgent}
+              onChange={(e) => patchRow(row.id, 'deliveryAgent', e.target.value.toLowerCase())}
+              disabled={disabled}
+              className={cn(
+                'w-full rounded-[8px] border border-[var(--border)] bg-[var(--ghost)]',
+                'text-sm text-[#15803D] px-2.5 py-1.5 outline-none transition-colors font-mono',
+                'placeholder:text-[var(--ink-light)] placeholder:font-sans placeholder:text-xs',
+                'focus:border-[#15803D]/60 focus:bg-[var(--surface)]',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            />
 
-              {/* Agent email */}
-              <div className="flex-1">
-                <input
-                  type="email"
-                  placeholder="Agent email"
-                  value={row.email}
-                  onChange={(e) => patchRow(row.id, 'email', e.target.value)}
-                  disabled={disabled}
-                  className={cn(
-                    'w-full rounded-[10px] border bg-[var(--ghost)] text-sm text-[var(--ink)]',
-                    'px-3 py-2 outline-none transition-colors duration-150',
-                    'placeholder:text-[var(--ink-light)]',
-                    'focus:border-[var(--sage)] focus:bg-[var(--surface)]',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                    rowError ? 'border-[var(--red)]' : 'border-[var(--border)]',
-                  )}
-                />
-              </div>
-
-              {/* Remove */}
-              <button
-                type="button"
-                onClick={() => removeRow(row.id)}
-                disabled={disabled}
-                className="mt-1 p-2 rounded-[8px] text-[var(--ink-light)] hover:bg-[var(--red-light)]
-                           hover:text-[var(--red)] transition-colors disabled:opacity-40"
-                aria-label="Remove mapping"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-
-            {rowError && (
-              <p className="text-xs text-[var(--red)] pl-1" role="alert">{rowError}</p>
-            )}
+            {/* OPS agent username */}
+            <input
+              type="text"
+              placeholder="ops username"
+              value={row.opsAgent}
+              onChange={(e) => patchRow(row.id, 'opsAgent', e.target.value.toLowerCase())}
+              disabled={disabled}
+              className={cn(
+                'w-full rounded-[8px] border border-[var(--border)] bg-[var(--ghost)]',
+                'text-sm text-[#1D4ED8] px-2.5 py-1.5 outline-none transition-colors font-mono',
+                'placeholder:text-[var(--ink-light)] placeholder:font-sans placeholder:text-xs',
+                'focus:border-[#1D4ED8]/60 focus:bg-[var(--surface)]',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            />
           </div>
-        );
-      })}
+        ))}
+      </div>
+
+      <p className="text-[0.65rem] text-[var(--ink-light)] pl-0.5">
+        Agent usernames are optional — rows without assignments are still saved.
+      </p>
     </div>
   );
 }

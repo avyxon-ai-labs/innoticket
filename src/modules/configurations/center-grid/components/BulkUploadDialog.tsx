@@ -191,13 +191,29 @@ function ProgressBar({ processed, total }: { processed: number; total: number })
 // ── Main dialog ───────────────────────────────────────────────────────────────
 
 interface Props {
-  open:    boolean;
-  onClose: () => void;
+  open:             boolean;
+  onClose:          () => void;
+  /** Which bulk operation to run (controls API endpoint) */
+  jobType:          import('../../../../services/job.service').BulkJobType;
+  /** Dialog heading, e.g. "Bulk Upload — Centre Grid" */
+  title:            string;
+  /** One-liner below the heading */
+  subtitle?:        string;
+  /** Filename for the downloaded template file */
+  templateFileName: string;
+  /** Footer message shown after a successful COMPLETED job */
+  doneMessage?:     string;
 }
 
 type Stage = 'idle' | 'uploading' | 'polling' | 'done';
 
-export function BulkUploadDialog({ open, onClose }: Props) {
+export function BulkUploadDialog({
+  open, onClose,
+  jobType, title,
+  subtitle  = 'Upload an Excel file to create or update records in bulk.',
+  templateFileName,
+  doneMessage = '✓ Upload completed.',
+}: Props) {
   const navigate = useNavigate();
 
   const [stage,       setStage]       = useState<Stage>('idle');
@@ -271,11 +287,11 @@ export function BulkUploadDialog({ open, onClose }: Props) {
   async function handleDownload() {
     setDownloading(true);
     try {
-      const res  = await bulkService.downloadTemplate('BULK_CENTER_GRID_ADD');
+      const res  = await bulkService.downloadTemplate(jobType);
       const url  = URL.createObjectURL(new Blob([res.data as BlobPart]));
       const a    = document.createElement('a');
       a.href     = url;
-      a.download = 'centre_grid_template.xlsx';
+      a.download = templateFileName;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -291,7 +307,7 @@ export function BulkUploadDialog({ open, onClose }: Props) {
     setStage('uploading');
     setUploadErr(null);
     try {
-      const res = await bulkService.upload('BULK_CENTER_GRID_ADD', file);
+      const res = await bulkService.upload(jobType, file);
       const j   = res.data.data;
       setJob(j);
       setStage('polling');
@@ -326,7 +342,7 @@ export function BulkUploadDialog({ open, onClose }: Props) {
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Bulk Upload Centre Grid"
+      aria-label={title}
     >
       {/* Backdrop */}
       <div
@@ -353,10 +369,10 @@ export function BulkUploadDialog({ open, onClose }: Props) {
           <div>
             <h2 className="text-base font-semibold text-[var(--ink)] tracking-tight"
                 style={{ fontFamily: 'var(--font-display)' }}>
-              Bulk Upload — Centre Grid
+              {title}
             </h2>
             <p className="text-xs text-[var(--ink-light)] mt-0.5">
-              Upload an Excel file to create or update multiple centres at once.
+              {subtitle}
             </p>
           </div>
           <button
@@ -571,7 +587,7 @@ export function BulkUploadDialog({ open, onClose }: Props) {
         <div className="px-5 py-4 border-t border-[var(--border)] flex items-center justify-between gap-2 flex-wrap">
           {/* Left: dismiss hint after terminal */}
           <div className="text-[0.65rem] text-[var(--ink-light)]">
-            {stage === 'done' && job?.status === 'COMPLETED' && '✓ Centre data updated.'}
+            {stage === 'done' && job?.status === 'COMPLETED' && doneMessage}
             {stage === 'done' && job?.status === 'FAILED' && (
               <span>
                 Check the{' '}

@@ -352,8 +352,6 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
               <span className="font-mono">{ticket.project.projectCode}</span>
             } />
             <Field label="Project Name" value={ticket.project.projectName} />
-            <Field label="SLA Level 1"  value={`${ticket.project.slaLevel1Hours}h`} />
-            <Field label="SLA Level 2"  value={`${ticket.project.slaLevel2Hours}h`} />
           </div>
         </Card>
       </div>

@@ -21,17 +21,26 @@ const STATUS_OPTIONS = [
   { value: 'INACTIVE', label: 'Inactive' },
 ];
 
+const USER_GROUP_OPTIONS = [
+  { value: '',         label: 'None'     },
+  { value: 'OPS',      label: 'OPS'      },
+  { value: 'DELIVERY', label: 'Delivery' },
+];
+
 // ── Default ───────────────────────────────────────────────────────────────────
 
 const empty: UserPayload = {
-  fullName:        '',
-  username:        '',
-  password:        '',
-  contact:         '',
-  post:            '',
-  managerUsername: '',
-  roleCode:        'USER',
-  status:          'ACTIVE',
+  fullName:            '',
+  username:            '',
+  password:            '',
+  contact:             '',
+  post:                '',
+  managerUsername:     '',
+  roleCode:            'USER',
+  status:              'ACTIVE',
+  isTemporaryPassword: true,
+  projectCode:         null,
+  userGroup:           null,
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -49,14 +58,17 @@ export function UserForm() {
   useEffect(() => {
     if (modalMode === 'edit' && editTarget) {
       setForm({
-        fullName:        editTarget.fullName,
-        username:        editTarget.username,
-        password:        '',   // never pre-fill — always requires intentional entry
-        contact:         editTarget.contact,
-        post:            editTarget.post,
-        managerUsername: editTarget.managerUsername ?? '',
-        roleCode:        editTarget.roleCode,
-        status:          editTarget.status,
+        fullName:            editTarget.fullName,
+        username:            editTarget.username,
+        password:            '',   // never pre-fill — always requires intentional entry
+        contact:             editTarget.contact,
+        post:                editTarget.post,
+        managerUsername:     editTarget.managerUsername ?? '',
+        roleCode:            editTarget.roleCode,
+        status:              editTarget.status,
+        isTemporaryPassword: editTarget.isTemporaryPassword,
+        projectCode:         editTarget.projectCode ?? null,
+        userGroup:           editTarget.userGroup   ?? null,
       });
     } else {
       setForm(empty);
@@ -77,7 +89,7 @@ export function UserForm() {
     if (!form.username.trim()) e.username = 'Username is required';
     if (modalMode === 'create' && !form.password.trim())
       e.password = 'Temporary password is required';
-    if (!form.roleCode)        e.roleCode = 'Role is required';
+    if (!form.roleCode) e.roleCode = 'Role is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -89,6 +101,7 @@ export function UserForm() {
       const payload: UserPayload = {
         ...form,
         managerUsername: form.managerUsername?.trim() || '',
+        projectCode:     form.projectCode?.trim()     || null,
       };
       if (modalMode === 'create') {
         await createMut.mutateAsync(payload);
@@ -108,7 +121,7 @@ export function UserForm() {
       open={modalOpen}
       onClose={closeModal}
       title={modalMode === 'create' ? 'New User' : 'Edit User'}
-      description="Manage user identity, role and access status."
+      description="Manage user identity, role, group and access status."
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={closeModal} disabled={isPending}>
@@ -125,6 +138,7 @@ export function UserForm() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+
         {/* Full Name + Username */}
         <div className="grid grid-cols-2 gap-3">
           <Input
@@ -136,7 +150,7 @@ export function UserForm() {
           />
           <Input
             label="Username"
-            placeholder="e.g. jane.smith"
+            placeholder="e.g. jane@example.com"
             value={form.username}
             onChange={(e) => patch('username', e.target.value.toLowerCase())}
             error={errors.username}
@@ -158,7 +172,7 @@ export function UserForm() {
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="Contact"
-            placeholder="e.g. +1 555 0100"
+            placeholder="e.g. 9876543210"
             value={form.contact}
             onChange={(e) => patch('contact', e.target.value)}
             error={errors.contact}
@@ -175,7 +189,7 @@ export function UserForm() {
         {/* Manager Username */}
         <Input
           label="Manager Username"
-          placeholder="e.g. john.doe (optional)"
+          placeholder="e.g. manager@example.com (optional)"
           value={form.managerUsername}
           onChange={(e) => patch('managerUsername', e.target.value.toLowerCase())}
           error={errors.managerUsername}
@@ -198,6 +212,60 @@ export function UserForm() {
             error={errors.status}
           />
         </div>
+
+        {/* User Group + Project Code (Project Code only for CLIENT role) */}
+        <div className={form.roleCode === 'CLIENT' ? 'grid grid-cols-2 gap-3' : ''}>
+          <Select
+            label="User Group"
+            options={USER_GROUP_OPTIONS}
+            value={form.userGroup ?? ''}
+            onChange={(val) =>
+              patch('userGroup', (val as UserPayload['userGroup']) || null)
+            }
+          />
+          {form.roleCode === 'CLIENT' && (
+            <Input
+              label="Project Code"
+              placeholder="e.g. PRJ001 (optional)"
+              value={form.projectCode ?? ''}
+              onChange={(e) =>
+                patch('projectCode', e.target.value.toUpperCase() || null)
+              }
+              error={errors.projectCode}
+            />
+          )}
+        </div>
+
+        {/* Temporary Password toggle */}
+        <div className="flex items-center justify-between rounded-xl border border-[var(--border)]
+                        bg-[var(--ghost)] px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-[var(--ink)]">Temporary Password</p>
+            <p className="text-xs text-[var(--ink-light)]">
+              User will be prompted to change password on next login
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={form.isTemporaryPassword}
+            onClick={() => patch('isTemporaryPassword', !form.isTemporaryPassword)}
+            className={[
+              'relative w-10 h-[22px] rounded-full transition-colors duration-200 outline-none',
+              'focus-visible:ring-2 focus-visible:ring-[var(--sage)]',
+              form.isTemporaryPassword ? 'bg-[var(--sage)]' : 'bg-[var(--border)]',
+            ].join(' ')}
+          >
+            <span
+              className={[
+                'absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow',
+                'transition-transform duration-200',
+                form.isTemporaryPassword ? 'translate-x-[18px]' : 'translate-x-0',
+              ].join(' ')}
+            />
+          </button>
+        </div>
+
       </form>
     </Modal>
   );

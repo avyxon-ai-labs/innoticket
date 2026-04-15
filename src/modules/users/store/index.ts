@@ -5,9 +5,9 @@ import type { UserResponse, UserStatus, UserRole } from '../../../services/user.
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface UserFiltersState {
-  search?:    string;
-  status?:    UserStatus | '';
-  roleCodes?: UserRole[];
+  searchText?: string;
+  status?:     UserStatus | '';
+  roleCodes?:  UserRole[];
 }
 
 export interface UserPagination {

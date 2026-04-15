@@ -48,7 +48,15 @@ export const useDashboardStore = create<DashboardStore>()(
 
       setProjectCode: (v) =>
         set((s) => ({
-          filters: { ...s.filters, projectCode: v, centreCodes: [] },
+          // Services + escalation types are project-scoped, so reset them
+          // alongside centreCodes whenever the project changes.
+          filters: {
+            ...s.filters,
+            projectCode:     v,
+            services:        [],
+            escalationTypes: [],
+            centreCodes:     [],
+          },
           pagination: { ...s.pagination, page: 0 },
         })),
 

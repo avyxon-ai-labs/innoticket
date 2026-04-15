@@ -11,8 +11,10 @@ interface ModalProps {
   title?:       string;
   description?: string;
   size?:        ModalSize;
-  /** Clicking backdrop closes modal (default true) */
+  /** Clicking the backdrop closes the modal (default false — use the ✕ button) */
   closeOnBackdrop?: boolean;
+  /** Pressing Escape closes the modal (default false — use the ✕ button) */
+  closeOnEsc?: boolean;
   children:     React.ReactNode;
   footer?:      React.ReactNode;
 }
@@ -30,21 +32,22 @@ export function Modal({
   title,
   description,
   size = 'md',
-  closeOnBackdrop = true,
+  closeOnBackdrop = false,
+  closeOnEsc       = false,
   children,
   footer,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // ESC to close
+  // ESC to close (opt-in only)
   useEffect(() => {
-    if (!open) return;
+    if (!open || !closeOnEsc) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [open, closeOnEsc, onClose]);
 
   // Body scroll lock
   useEffect(() => {

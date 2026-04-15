@@ -1,10 +1,12 @@
+import { useEffect }                             from 'react';
 import { Search, X }                            from 'lucide-react';
 import { Input }                                from '../../../../components/ui/Input';
+import { Select }                               from '../../../../components/ui/Select';
 import { Button }                               from '../../../../components/ui/Button';
 import { MultiSelect }                          from '../../../../components/ui/MultiSelect';
 import {
   useActiveProjectCodes,
-  useActiveServiceNames,
+  useServiceNamesByProjects,
   useCenterCodesByProjects,
 }                                               from '../hooks';
 import { useCenterGridStore }                   from '../store';
@@ -25,7 +27,16 @@ export function CenterGridFilters() {
   };
 
   const { data: projectOptions = [], isLoading: loadingProjects } = useActiveProjectCodes();
-  const { data: serviceOptions = [], isLoading: loadingServices } = useActiveServiceNames();
+  // Services scoped to selected project(s)
+  const { data: serviceOptions = [], isLoading: loadingServices } =
+    useServiceNamesByProjects(filters.projectCodes);
+
+  // Auto-select the first project when data loads and nothing is selected yet
+  useEffect(() => {
+    if (projectOptions.length > 0 && filters.projectCodes.length === 0) {
+      setProjectCodes([projectOptions[0]]);
+    }
+  }, [projectOptions, filters.projectCodes.length, setProjectCodes]);
 
   // Center codes depend on selected projects — disabled until at least one project chosen
   const { data: centerCodeOptions = [], isLoading: loadingCenters } =
@@ -62,47 +73,40 @@ export function CenterGridFilters() {
 
       {/* Row 2: multi-select dropdowns */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Project Codes */}
-        <MultiSelect
+        {/* Project Code — single selection */}
+        <Select
           label="Project Code"
-          placeholder="All projects"
-          options={projectOptions}
-          value={filters.projectCodes}
-          onChange={setProjectCodes}
-          loading={loadingProjects}
+          placeholder={loadingProjects ? 'Loading…' : 'Select project…'}
+          options={projectOptions.map((p) => ({ value: p, label: p }))}
+          value={filters.projectCodes[0] ?? ''}
+          onChange={(v) => setProjectCodes(v ? [v] : [])}
         />
 
         {/* Center Codes — disabled until project selected */}
-        <div className="flex flex-col gap-1">
-          <MultiSelect
-            label="Centre Code"
-            placeholder={
-              filters.projectCodes.length === 0
-                ? 'Select a project first'
-                : 'All centres'
-            }
-            options={centerCodeOptions}
-            value={filters.centerCodes}
-            onChange={setCenterCodes}
-            loading={loadingCenters}
-            disabled={filters.projectCodes.length === 0}
-            searchable
-          />
-          {filters.projectCodes.length === 0 && (
-            <p className="text-[0.65rem] text-[var(--ink-light)] pl-0.5">
-              Select a project to enable centre filter
-            </p>
-          )}
-        </div>
+        <MultiSelect
+          label="Centre Code"
+          placeholder={
+            filters.projectCodes.length === 0 ? 'Select a project first' : 'All centres'
+          }
+          options={centerCodeOptions}
+          value={filters.centerCodes}
+          onChange={setCenterCodes}
+          loading={loadingCenters}
+          disabled={filters.projectCodes.length === 0}
+          searchable
+        />
 
-        {/* Service Names */}
+        {/* Service Names — scoped to selected project(s) */}
         <MultiSelect
           label="Service Name"
-          placeholder="All services"
+          placeholder={
+            filters.projectCodes.length === 0 ? 'Select a project first' : 'All services'
+          }
           options={serviceOptions}
           value={filters.serviceNames}
           onChange={setServiceNames}
           loading={loadingServices}
+          disabled={filters.projectCodes.length === 0}
         />
       </div>
     </div>

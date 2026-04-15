@@ -2,8 +2,8 @@ import { ArrowLeft, Pencil, MapPin, Phone, Users, Calendar } from 'lucide-react'
 import { Button }             from '../../../../components/ui/Button';
 import { Spinner }            from '../../../../components/ui/Spinner';
 import { useNavigationStore } from '../../../../store/navigationStore';
-import { useCenterGridStore } from '../store';
-import { useCenterGridById }  from '../hooks';
+import { useCenterGridStore }  from '../store';
+import { useCenterGridDetail } from '../hooks';
 import { formatLocalDateTime } from '../../../../utils';
 
 // ── Field ──────────────────────────────────────────────────────────────────────
@@ -41,11 +41,11 @@ function Section({ title, icon, children }: {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function CenterGridDetail({ gridId }: { gridId: number }) {
+export function CenterGridDetail({ id }: { id: number }) {
   const { popView }  = useNavigationStore();
   const { openEdit } = useCenterGridStore();
 
-  const { data: grid, isLoading, isError } = useCenterGridById(gridId);
+  const { data: grid, isLoading, isError } = useCenterGridDetail(id);
 
   if (isLoading) {
     return (
@@ -64,7 +64,7 @@ export function CenterGridDetail({ gridId }: { gridId: number }) {
     );
   }
 
-  const serviceCount = Object.keys(grid.serviceMappings).length;
+  const serviceCount = grid.serviceMappings.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -148,14 +148,32 @@ export function CenterGridDetail({ gridId }: { gridId: number }) {
           <p className="text-sm text-[var(--ink-light)]">No services mapped to this centre.</p>
         ) : (
           <div className="divide-y divide-[var(--border)]">
-            {Object.entries(grid.serviceMappings).map(([service, email]) => (
-              <div key={service} className="flex items-center justify-between py-2.5 gap-4">
+            {/* Column headers */}
+            <div className="grid grid-cols-[1fr_1fr_1fr] gap-4 pb-2">
+              <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-[var(--ink-light)]">
+                Service
+              </span>
+              <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-[#15803D]">
+                Delivery Agent
+              </span>
+              <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-[#1D4ED8]">
+                OPS Agent
+              </span>
+            </div>
+            {grid.serviceMappings.map((m) => (
+              <div key={m.serviceName}
+                   className="grid grid-cols-[1fr_1fr_1fr] gap-4 py-2.5 items-center">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs
                                  font-semibold bg-[var(--sage-light)] text-[var(--sage)]
-                                 font-mono tracking-wide shrink-0">
-                  {service}
+                                 font-mono tracking-wide w-fit">
+                  {m.serviceName}
                 </span>
-                <span className="text-sm text-[var(--ink-mid)] truncate">{email}</span>
+                <span className="font-mono text-xs text-[#15803D] truncate">
+                  {m.deliveryAgent || '—'}
+                </span>
+                <span className="font-mono text-xs text-[#1D4ED8] truncate">
+                  {m.opsAgent || '—'}
+                </span>
               </div>
             ))}
           </div>

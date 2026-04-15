@@ -9,7 +9,7 @@ export function CenterGridDeleteDialog() {
   const deleteMut = useDeleteCenterGrid();
 
   async function handleConfirm() {
-    if (!deleteTarget) return;
+    if (!deleteTarget?.id) return;
     try {
       await deleteMut.mutateAsync(deleteTarget.id);
       closeDelete();

@@ -5,6 +5,8 @@ import type { ApiEnvelope } from './service-escalation.service';
 
 export type UserRole   = 'ADMIN' | 'USER' | 'CLIENT';
 export type UserStatus = 'ACTIVE' | 'INACTIVE';
+/** OPS — staff who raise requests; DELIVERY — staff who resolve them. */
+export type UserGroup  = 'OPS' | 'DELIVERY';
 
 export interface UserResponse {
   id:                  number;
@@ -15,6 +17,7 @@ export interface UserResponse {
   managerUsername:     string | null;
   roleCode:            UserRole;
   status:              UserStatus;
+  userGroup:           UserGroup | null;
   isTemporaryPassword: boolean;
   lastLogin:           string | null;
   projectCode:         string | null;
@@ -25,24 +28,27 @@ export interface UserResponse {
 }
 
 export interface UserPayload {
-  fullName:        string;
-  username:        string;
-  password:        string;
-  contact:         string;
-  post:            string;
-  managerUsername: string;
-  roleCode:        UserRole;
-  status:          UserStatus;
+  fullName:            string;
+  username:            string;
+  password:            string;          // optional on update — blank = keep existing
+  contact:             string;
+  post:                string;
+  managerUsername:     string;
+  roleCode:            UserRole;
+  status:              UserStatus;
+  isTemporaryPassword: boolean;
+  projectCode:         string | null;
+  userGroup:           UserGroup | null;
 }
 
 export interface UserFilters {
-  search?:    string;
-  status?:    UserStatus | '';
-  roleCodes?: string;   // CSV e.g. "ADMIN,CLIENT"
-  page?:      number;   // 0-indexed
-  size?:      number;
-  sort?:      string;
-  direction?: 'asc' | 'desc';
+  searchText?: string;            // renamed from `search`
+  status?:     UserStatus | '';
+  roleCodes?:  string;            // CSV e.g. "ADMIN,CLIENT"
+  page?:       number;            // 0-indexed
+  size?:       number;
+  sort?:       string;
+  direction?:  'asc' | 'desc';
 }
 
 export interface PageResponse<T> {

@@ -5,11 +5,18 @@ import { Select }                                      from '../../../../compone
 import { Button }                                      from '../../../../components/ui/Button';
 import { Spinner }                                     from '../../../../components/ui/Spinner';
 import { ServiceMappingEditor, type MappingRow }       from './ServiceMappingEditor';
-import { useActiveProjectCodes, useActiveServiceNames,
+import { useActiveProjectCodes, useProjectServices,
          useCreateCenterGrid, useUpdateCenterGrid }    from '../hooks';
 import { useCenterGridStore }                          from '../store';
 import { centerGridService }                           from '../../../../services/center-grid.service';
-import type { CenterGridPayload }                      from '../../../../services/center-grid.service';
+import type { CenterGridPayload,
+              ServiceMapping }                         from '../../../../services/center-grid.service';
+
+// ── Stable fallback so the serviceNames effect dependency never gets a new
+//    reference while the query is disabled / loading (data === undefined).
+//    An inline `= []` default creates a new array on every render, which
+//    makes useEffect([serviceNames]) fire endlessly → "Maximum update depth".
+const NO_SERVICES: string[] = [];
 
 // ── Default form state ─────────────────────────────────────────────────────────
 
@@ -24,7 +31,7 @@ const emptyForm: CenterGridPayload = {
   csupNumber:     '',
   totalCandidate: 0,
   examDates:      '',
-  serviceMappings: {},
+  serviceMappings: [],
 };
 
 type FieldErrors = Partial<Record<keyof CenterGridPayload | 'form', string>>;
@@ -34,17 +41,21 @@ type FieldErrors = Partial<Record<keyof CenterGridPayload | 'form', string>>;
 export function CenterGridForm() {
   const { modalOpen, modalMode, editTarget, closeModal } = useCenterGridStore();
 
-  const [form,          setForm]       = useState<CenterGridPayload>(emptyForm);
-  const [mappingRows,   setMappingRows] = useState<MappingRow[]>([]);
-  const [fieldErrors,   setFieldErrors] = useState<FieldErrors>({});
-  const [mappingErrors, setMappingErrors] = useState<Record<string, string>>({});
+  const [form,          setForm]          = useState<CenterGridPayload>(emptyForm);
+  const [mappingRows,   setMappingRows]   = useState<MappingRow[]>([]);
+  const [fieldErrors,   setFieldErrors]   = useState<FieldErrors>({});
   const [submitting,    setSubmitting]    = useState(false);
 
   const createMut = useCreateCenterGrid();
   const updateMut = useUpdateCenterGrid();
 
   const { data: projectCodes = [], isLoading: loadingProjects } = useActiveProjectCodes();
-  const { data: serviceNames  = [], isLoading: loadingServices } = useActiveServiceNames();
+
+  // Load project services only when a project is selected and modal is open
+  const { data: serviceNames = NO_SERVICES, isLoading: loadingServices } = useProjectServices(
+    form.projectCode || undefined,
+    modalOpen && !!form.projectCode,
+  );
 
   const projectOptions = projectCodes.map((c) => ({ value: c, label: c }));
 
@@ -55,23 +66,24 @@ export function CenterGridForm() {
 
     if (modalMode === 'edit' && editTarget) {
       setForm({
-        projectCode:    editTarget.projectCode,
-        centerCode:     editTarget.centerCode,
-        centerName:     editTarget.centerName,
-        state:          editTarget.state,
-        city:           editTarget.city,
-        centerAddress:  editTarget.centerAddress,
-        csupName:       editTarget.csupName,
-        csupNumber:     editTarget.csupNumber,
-        totalCandidate: editTarget.totalCandidate,
-        examDates:      editTarget.examDates,
+        projectCode:     editTarget.projectCode,
+        centerCode:      editTarget.centerCode,
+        centerName:      editTarget.centerName,
+        state:           editTarget.state,
+        city:            editTarget.city,
+        centerAddress:   editTarget.centerAddress,
+        csupName:        editTarget.csupName,
+        csupNumber:      editTarget.csupNumber,
+        totalCandidate:  editTarget.totalCandidate,
+        examDates:       editTarget.examDates,
         serviceMappings: editTarget.serviceMappings,
       });
       setMappingRows(
-        Object.entries(editTarget.serviceMappings).map(([service, email]) => ({
-          id: crypto.randomUUID(),
-          service,
-          email,
+        editTarget.serviceMappings.map((m) => ({
+          id:            crypto.randomUUID(),
+          service:       m.serviceName,
+          deliveryAgent: m.deliveryAgent,
+          opsAgent:      m.opsAgent,
         })),
       );
     } else {
@@ -79,8 +91,29 @@ export function CenterGridForm() {
       setMappingRows([]);
     }
     setFieldErrors({});
-    setMappingErrors({});
   }, [modalOpen, modalMode, editTarget]);
+
+  // Sync mappingRows whenever serviceNames loads or the project changes.
+  // Merges: preserves existing agent values, adds new services with empty agents,
+  // and drops services no longer in the project (only relevant on project switch).
+  useEffect(() => {
+    if (!serviceNames.length) {
+      // No services available yet — clear rows so empty-state renders
+      setMappingRows([]);
+      return;
+    }
+    setMappingRows((prev) => {
+      const prevMap = new Map(prev.map((r) => [r.service, r]));
+      return serviceNames.map((svc) =>
+        prevMap.get(svc) ?? {
+          id:            crypto.randomUUID(),
+          service:       svc,
+          deliveryAgent: '',
+          opsAgent:      '',
+        },
+      );
+    });
+  }, [serviceNames]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -91,33 +124,13 @@ export function CenterGridForm() {
 
   function validateForm(): boolean {
     const e: FieldErrors = {};
-    if (!form.projectCode.trim())  e.projectCode  = 'Project is required';
-    if (!form.centerCode.trim())   e.centerCode   = 'Center code is required';
-    if (!form.centerName.trim())   e.centerName   = 'Center name is required';
+    if (!form.projectCode.trim()) e.projectCode = 'Project is required';
+    if (!form.centerCode.trim())  e.centerCode  = 'Center code is required';
+    if (!form.centerName.trim())  e.centerName  = 'Center name is required';
 
-    // Validate each mapping row locally
-    const mErr: Record<string, string> = {};
-    for (const row of mappingRows) {
-      if (!row.service) {
-        mErr[row.id] = 'Select a service';
-      } else if (!row.email.trim()) {
-        mErr[row.id] = 'Agent email is required';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
-        mErr[row.id] = 'Enter a valid email';
-      }
-    }
-    // Duplicate service check within the form
-    const seen = new Set<string>();
-    for (const row of mappingRows) {
-      if (row.service) {
-        if (seen.has(row.service)) mErr[row.id] = `"${row.service}" is already added`;
-        else seen.add(row.service);
-      }
-    }
-
+    // Agent fields are optional — no row-level errors needed.
     setFieldErrors(e);
-    setMappingErrors(mErr);
-    return Object.keys(e).length === 0 && Object.keys(mErr).length === 0;
+    return Object.keys(e).length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -126,61 +139,34 @@ export function CenterGridForm() {
 
     setSubmitting(true);
     try {
-      const isCreate = modalMode === 'create';
+      const payload: CenterGridPayload = {
+        ...form,
+        // Include all service rows — agents may be empty strings (optional)
+        serviceMappings: mappingRows.map<ServiceMapping>((r) => ({
+          serviceName:   r.service,
+          deliveryAgent: r.deliveryAgent.trim(),
+          opsAgent:      r.opsAgent.trim(),
+        })),
+      };
 
-      // ── Pre-save existence check (create only) ─────────────────────────────
-      if (isCreate) {
-        const existRes = await centerGridService.checkExistence(
-          form.projectCode,
-          form.centerCode,
+      if (modalMode === 'create') {
+        // Check if (projectCode, centerCode) already exists before creating
+        const checkRes = await centerGridService.checkExistence(
+          payload.projectCode,
+          payload.centerCode,
         );
-        if (existRes.data.data === true) {
+        if (checkRes.data.data === true) {
           setFieldErrors((p) => ({
             ...p,
-            form: `Center "${form.centerCode}" already exists in project "${form.projectCode}"`,
+            centerCode: `Centre "${payload.centerCode}" already exists in project "${payload.projectCode}"`,
           }));
-          setSubmitting(false);
           return;
         }
-      }
-
-      // ── Pre-save service-in-center check ──────────────────────────────────
-      // On create: check all rows. On edit: check only newly-added services.
-      const originalServices = isCreate
-        ? new Set<string>()
-        : new Set(Object.keys(editTarget!.serviceMappings));
-
-      const mErr: Record<string, string> = {};
-      for (const row of mappingRows) {
-        if (row.service && !originalServices.has(row.service)) {
-          const svcRes = await centerGridService.checkService(
-            form.projectCode,
-            form.centerCode,
-            row.service,
-          );
-          if (svcRes.data.data === true) {
-            mErr[row.id] = `"${row.service}" is already mapped to this center`;
-          }
-        }
-      }
-      if (Object.keys(mErr).length > 0) {
-        setMappingErrors(mErr);
-        setSubmitting(false);
-        return;
-      }
-
-      // ── Build payload ──────────────────────────────────────────────────────
-      const serviceMappings: Record<string, string> = {};
-      for (const row of mappingRows) {
-        if (row.service) serviceMappings[row.service] = row.email;
-      }
-
-      const payload: CenterGridPayload = { ...form, serviceMappings };
-
-      if (isCreate) {
         await createMut.mutateAsync(payload);
       } else {
-        await updateMut.mutateAsync({ id: editTarget!.id, payload });
+        // Edit — use database id from editTarget
+        if (!editTarget?.id) throw new Error('Missing id for update');
+        await updateMut.mutateAsync({ id: editTarget.id, payload });
       }
 
       closeModal();
@@ -201,7 +187,7 @@ export function CenterGridForm() {
       onClose={closeModal}
       size="xl"
       title={modalMode === 'create' ? 'New Centre Grid' : 'Edit Centre Grid'}
-      description="Configure centre details, CSUP contacts and service escalation mappings."
+      description="Configure centre details, CSUP contacts and service agent mappings."
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={closeModal} disabled={isPending}>
@@ -266,14 +252,14 @@ export function CenterGridForm() {
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="State"
-            placeholder="e.g. Delhi"
+            placeholder="e.g. Maharashtra"
             value={form.state}
             onChange={(e) => patch('state', e.target.value)}
             error={fieldErrors.state}
           />
           <Input
             label="City"
-            placeholder="e.g. New Delhi"
+            placeholder="e.g. Mumbai"
             value={form.city}
             onChange={(e) => patch('city', e.target.value)}
             error={fieldErrors.city}
@@ -328,7 +314,7 @@ export function CenterGridForm() {
           />
           <Input
             label="Exam Dates"
-            placeholder="e.g. 2026-05-10, 2026-05-11"
+            placeholder="e.g. 2026-05-10"
             value={form.examDates}
             onChange={(e) => patch('examDates', e.target.value)}
             error={fieldErrors.examDates}
@@ -342,14 +328,12 @@ export function CenterGridForm() {
         {loadingServices ? (
           <div className="flex items-center gap-2">
             <Spinner size="sm" />
-            <span className="text-xs text-[var(--ink-light)]">Loading services…</span>
+            <span className="text-xs text-[var(--ink-light)]">Loading project services…</span>
           </div>
         ) : (
           <ServiceMappingEditor
             rows={mappingRows}
             onChange={setMappingRows}
-            availableServices={serviceNames}
-            errors={mappingErrors}
             disabled={isPending}
           />
         )}

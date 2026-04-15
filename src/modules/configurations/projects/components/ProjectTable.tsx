@@ -1,5 +1,5 @@
 import { useState }                  from 'react';
-import { Pencil, Trash2, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Pencil, Trash2, RefreshCw, Eye, EyeOff, Layers } from 'lucide-react';
 import { Table, type Column }        from '../../../../components/ui/Table';
 import { Badge }                     from '../../../../components/ui/Badge';
 import { Button }                    from '../../../../components/ui/Button';
@@ -85,9 +85,51 @@ export function ProjectTable({ flat = false }: { flat?: boolean }) {
       ),
     },
     {
+      key:      'username',
+      label:    'Username',
+      sortable: true,
+      render:   (row) => (
+        <span className="text-xs font-mono text-[var(--ink-mid)]">{row.username}</span>
+      ),
+    },
+    {
       key:    'password',
       label:  'Password',
       render: (row) => <PasswordCell value={row.password} />,
+    },
+    {
+      key:    'services',
+      label:  'Services',
+      render: (row) => {
+        const count = row.services?.length ?? 0;
+        if (count === 0) {
+          return (
+            <span className="text-xs text-[var(--ink-light)] italic">None</span>
+          );
+        }
+        // Unique service names
+        const names = [...new Set(row.services.map((s) => s.serviceName))];
+        return (
+          <div className="flex flex-wrap gap-1">
+            {names.map((name) => {
+              const escCount = row.services.filter((s) => s.serviceName === name).length;
+              return (
+                <span
+                  key={name}
+                  title={`${escCount} escalation type${escCount !== 1 ? 's' : ''}`}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[0.65rem]
+                             font-medium bg-[#EFF6FF] border border-[#BFDBFE] text-[#1D4ED8]
+                             whitespace-nowrap leading-none"
+                >
+                  <Layers size={9} className="shrink-0" />
+                  {name}
+                  <span className="ml-0.5 text-[#3B82F6] font-semibold">{escCount}</span>
+                </span>
+              );
+            })}
+          </div>
+        );
+      },
     },
     {
       key:      'status',
@@ -98,24 +140,6 @@ export function ProjectTable({ flat = false }: { flat?: boolean }) {
           variant={row.status === 'ACTIVE' ? 'open' : 'closed'}
           label={row.status === 'ACTIVE' ? 'Active' : 'Inactive'}
         />
-      ),
-    },
-    {
-      key:      'slaLevel1Hours',
-      label:    'SLA L1 (hrs)',
-      sortable: true,
-      align:    'right',
-      render:   (row) => (
-        <span className="font-mono text-sm">{row.slaLevel1Hours}</span>
-      ),
-    },
-    {
-      key:      'slaLevel2Hours',
-      label:    'SLA L2 (hrs)',
-      sortable: true,
-      align:    'right',
-      render:   (row) => (
-        <span className="font-mono text-sm">{row.slaLevel2Hours}</span>
       ),
     },
     {
@@ -170,7 +194,7 @@ export function ProjectTable({ flat = false }: { flat?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-0.5">
+      <div className="flex items-center justify-between px-4 pt-3">
         <p className="text-xs text-[var(--ink-light)]">
           {isLoading ? 'Loading…' : `${totalElements} project${totalElements !== 1 ? 's' : ''}`}
         </p>

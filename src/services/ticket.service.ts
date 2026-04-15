@@ -143,6 +143,9 @@ export interface TicketQueryParams {
   centerCodes?:  string; // CSV
   services?:     string; // CSV
   search?:       string;
+  assignedTo?:   string;  // filter by assignee username (My Work — Assigned to Me)
+  raisedBy?:     string;  // filter by creator username  (My Work — Raised by Me)
+  myTeam?:       boolean; // filter by current user's team (My Work — My Team)
 }
 
 // ── Service ───────────────────────────────────────────────────────────────────
@@ -181,11 +184,12 @@ export const ticketService = {
   uploadFile: (file: File) => {
     const fd = new FormData();
     fd.append('file', file);
-    // Do NOT set Content-Type manually — the browser must set it so the
-    // multipart boundary token is included (e.g. boundary=----WebKitFormBoundary…).
-    // Overriding it strips the boundary and breaks parsing on the server side,
-    // which is why uploads fail on mobile (Safari/Chrome) but may appear to
-    // work on desktop where servers are more lenient.
-    return api.post<ApiEnvelope<Attachment>>('/tickets/upload', fd);
+    // The Axios instance defaults to Content-Type: application/json.
+    // For multipart uploads we must DELETE that default so the browser can
+    // set its own "multipart/form-data; boundary=…" header — the boundary
+    // token is required for the server to parse the body correctly.
+    return api.post<ApiEnvelope<Attachment>>('/tickets/upload', fd, {
+      headers: { 'Content-Type': undefined },
+    });
   },
 };

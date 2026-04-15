@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { ticketService }                         from '../../../services/ticket.service';
 import { serviceEscalationService }              from '../../../services/service-escalation.service';
+import { centerGridService }                     from '../../../services/center-grid.service';
 import { dashboardService }                      from '../../../services/dashboard.service';
 import type { DashboardSummaryParams }           from '../../../services/dashboard.service';
 import type {
@@ -33,11 +34,12 @@ export const ticketKeys = {
 
 export function useTickets(params: TicketQueryParams) {
   return useQuery({
-    queryKey: ticketKeys.list(params),
-    queryFn:  async () => {
+    queryKey:        ticketKeys.list(params),
+    queryFn:         async () => {
       const res = await ticketService.getAll(params);
       return res.data.data;
     },
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -146,6 +148,35 @@ export function useServiceEscalationGroups() {
       return groups.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
     },
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * Fetches services enabled for a specific project via
+ * GET /api/projects/services?projectCode={projectCode}
+ * and groups them into [{ serviceName, escalationTypes[] }].
+ * Disabled when projectCode is empty.
+ * staleTime: 0 so a fresh fetch occurs each time the project changes.
+ */
+export function useProjectServiceGroups(projectCode: string | undefined) {
+  return useQuery({
+    queryKey: ['projects', 'services', 'grouped', projectCode ?? ''],
+    queryFn:  async () => {
+      const res = await centerGridService.getProjectServices(projectCode!);
+      const map = new Map<string, Set<string>>();
+      for (const item of res.data.data ?? []) {
+        if (!map.has(item.serviceName)) map.set(item.serviceName, new Set());
+        map.get(item.serviceName)!.add(item.escalationType);
+      }
+      const groups: ServiceEscalationGroup[] = [];
+      for (const [serviceName, types] of map) {
+        groups.push({ serviceName, escalationTypes: [...types].sort() });
+      }
+      return groups.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
+    },
+    enabled:   !!projectCode,
+    staleTime: 0,
+    gcTime:    5 * 60_000,
   });
 }
 

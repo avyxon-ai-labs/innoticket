@@ -12,10 +12,20 @@ import type { ServiceEscalationPayload } from '../../../../services/service-esca
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const empty: ServiceEscalationPayload = {
-  serviceName:    '',
-  escalationType: '',
-  active:         true,
+  serviceName:      '',
+  escalationType:   '',
+  active:           true,
+  slaLevel1Minutes: 0,
+  slaLevel2Minutes: 0,
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Parse a form string value to a non-negative integer, defaulting to 0. */
+function toMinutes(raw: string): number {
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -33,9 +43,11 @@ export function ServiceEscalationForm() {
   useEffect(() => {
     if (modalMode === 'edit' && editTarget) {
       setForm({
-        serviceName:    editTarget.serviceName,
-        escalationType: editTarget.escalationType,
-        active:         editTarget.active,
+        serviceName:      editTarget.serviceName,
+        escalationType:   editTarget.escalationType,
+        active:           editTarget.active,
+        slaLevel1Minutes: editTarget.slaLevel1Minutes,
+        slaLevel2Minutes: editTarget.slaLevel2Minutes,
       });
     } else {
       setForm(empty);
@@ -55,8 +67,16 @@ export function ServiceEscalationForm() {
 
   function validate(): boolean {
     const e: typeof errors = {};
-    if (!form.serviceName.trim())    e.serviceName    = 'Service name is required';
-    if (!form.escalationType.trim()) e.escalationType = 'Escalation type is required';
+    if (!form.serviceName.trim())
+      e.serviceName = 'Service name is required';
+    if (!form.escalationType.trim())
+      e.escalationType = 'Escalation type is required';
+    if (form.slaLevel1Minutes <= 0)
+      e.slaLevel1Minutes = 'Must be greater than 0';
+    if (form.slaLevel2Minutes <= 0)
+      e.slaLevel2Minutes = 'Must be greater than 0';
+    if (form.slaLevel2Minutes > 0 && form.slaLevel2Minutes <= form.slaLevel1Minutes)
+      e.slaLevel2Minutes = 'L2 threshold must be greater than L1';
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -64,7 +84,6 @@ export function ServiceEscalationForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-
     try {
       if (modalMode === 'create') {
         await createMut.mutateAsync(form);
@@ -73,7 +92,7 @@ export function ServiceEscalationForm() {
       }
       closeModal();
     } catch {
-      // Axios interceptor handles global error toast
+      // Global error toast handled by Axios interceptor
     }
   }
 
@@ -83,8 +102,8 @@ export function ServiceEscalationForm() {
     <Modal
       open={modalOpen}
       onClose={closeModal}
-      title={modalMode === 'create' ? 'New Service Escalation' : 'Edit Service Escalation'}
-      description="Map a service to its escalation type."
+      title={modalMode === 'create' ? 'New Escalation Config' : 'Edit Escalation Config'}
+      description="Define the service, escalation type, and SLA thresholds in minutes."
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={closeModal} disabled={isPending}>
@@ -101,6 +120,7 @@ export function ServiceEscalationForm() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+
         {/* Service Name */}
         <Input
           label="Service Name"
@@ -119,12 +139,40 @@ export function ServiceEscalationForm() {
           error={errors.escalationType}
         />
 
+        {/* SLA thresholds — side-by-side */}
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="SLA Level 1 (minutes)"
+            placeholder="e.g. 60"
+            type="number"
+            min={1}
+            value={form.slaLevel1Minutes === 0 ? '' : String(form.slaLevel1Minutes)}
+            onChange={(e) => patch('slaLevel1Minutes', toMinutes(e.target.value))}
+            error={errors.slaLevel1Minutes}
+          />
+          <Input
+            label="SLA Level 2 (minutes)"
+            placeholder="e.g. 120"
+            type="number"
+            min={1}
+            value={form.slaLevel2Minutes === 0 ? '' : String(form.slaLevel2Minutes)}
+            onChange={(e) => patch('slaLevel2Minutes', toMinutes(e.target.value))}
+            error={errors.slaLevel2Minutes}
+          />
+        </div>
+
+        {/* SLA hint */}
+        <p className="text-[0.68rem] text-[var(--ink-light)] -mt-2">
+          L1 fires first; L2 must exceed L1. Both values are in minutes.
+        </p>
+
         {/* Active Toggle */}
-        <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--ghost)] px-4 py-3">
+        <div className="flex items-center justify-between rounded-xl border border-[var(--border)]
+                        bg-[var(--ghost)] px-4 py-3">
           <div>
             <p className="text-sm font-medium text-[var(--ink)]">Active</p>
             <p className="text-xs text-[var(--ink-light)]">
-              Inactive rules will not trigger escalations
+              Inactive configs will not trigger escalations
             </p>
           </div>
           <button
@@ -147,6 +195,7 @@ export function ServiceEscalationForm() {
             />
           </button>
         </div>
+
       </form>
     </Modal>
   );

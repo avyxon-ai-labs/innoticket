@@ -1,20 +1,19 @@
 import { useState }                   from 'react';
 import { Eye, RefreshCw,
          ChevronLeft, ChevronRight,
-         Pencil, Clock, Download }    from 'lucide-react';
-import { TicketExportDialog }         from './TicketExportDialog';
-import { TicketStatusBadge }          from './TicketStatusBadge';
+         Pencil, Clock }              from 'lucide-react';
+import { TicketStatusBadge }          from '../../tickets/components/TicketStatusBadge';
 import { Button }                     from '../../../components/ui/Button';
 import { Select }                     from '../../../components/ui/Select';
 import { Spinner }                    from '../../../components/ui/Spinner';
 import { cn, formatLocalDateTime,
-         formatDuration, truncate,
+         formatDuration,
          formatActiveDuration }       from '../../../utils';
 import { useNavigationStore }         from '../../../store/navigationStore';
-import { useTickets }                 from '../hooks';
-import { useTicketStore }             from '../store';
+import { useMyWorkStore }             from '../store';
+import { useMyWorkTickets }           from '../hooks';
+import { useTicketStore }             from '../../tickets/store';
 import {
-  TAB_STATUSES,
   STATUS_TRANSITIONS,
 }                                     from '../../../services/ticket.service';
 import type { TicketResponse }        from '../../../services/ticket.service';
@@ -63,9 +62,7 @@ function TicketCard({
   const canUpdate = !!STATUS_TRANSITIONS[ticket.status];
 
   return (
-    <div
-      className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-4 flex flex-col gap-3"
-    >
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-4 flex flex-col gap-3">
       {/* Top row */}
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -74,7 +71,6 @@ function TicketCard({
             {ticket.project.projectCode} · {ticket.center.centerCode}
           </p>
           <p className="text-xs text-[var(--ink-light)]">{ticket.center.centerName}</p>
-          {/* Active duration + escalation */}
           {(ticket.activeSince || isEscalated(ticket.escalationLevel)) && (
             <div className="flex items-center gap-1.5 mt-1.5">
               {formatActiveDuration(ticket.activeSince, ticket.activeEndedAt) && (
@@ -111,21 +107,11 @@ function TicketCard({
         </span>
         <div className="flex items-center gap-1">
           {canUpdate && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onUpdateStatus}
-              leftIcon={<Pencil size={12} />}
-            >
+            <Button variant="ghost" size="sm" onClick={onUpdateStatus} leftIcon={<Pencil size={12} />}>
               Update
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onView}
-            leftIcon={<Eye size={12} />}
-          >
+          <Button variant="ghost" size="sm" onClick={onView} leftIcon={<Eye size={12} />}>
             View
           </Button>
         </div>
@@ -136,35 +122,24 @@ function TicketCard({
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function TicketTable({ flat = false }: { flat?: boolean }) {
+export function MyWorkTable({
+  username,
+  flat = false,
+}: {
+  username: string;
+  flat?: boolean;
+}) {
   const {
-    activeTab, filters, pagination,
-    setPage, setSize, openStatusDialog,
-  } = useTicketStore();
+    pagination, setPage, setSize,
+  } = useMyWorkStore();
 
-  const { pushView }  = useNavigationStore();
-  const [refetchKey,  setRefetchKey]  = useState(0);
-  const [exportOpen,  setExportOpen]  = useState(false);
+  // Status dialog is shared with the global TicketStatusDialog
+  const { openStatusDialog } = useTicketStore();
 
-  const projectCode = typeof filters.projectCode === 'string' ? filters.projectCode : '';
-  const centerCodes = Array.isArray(filters.centerCodes) ? filters.centerCodes : [];
-  const services    = Array.isArray(filters.services)    ? filters.services    : [];
+  const { pushView }                    = useNavigationStore();
+  const [refetchKey, setRefetchKey]     = useState(0);
 
-  const queryParams = {
-    page:      pagination.page,
-    size:      pagination.size,
-    statuses:  TAB_STATUSES[activeTab].join(','),
-    ...(projectCode           && { projectCodes: projectCode }),
-    ...(filters.search        && { search:       filters.search }),
-    ...(centerCodes.length    && { centerCodes:  centerCodes.join(',') }),
-    ...(services.length       && { services:     services.join(',') }),
-    _k: refetchKey,
-  };
-
-  // Don't fetch until a project is selected
-  const { data, isLoading, isFetching, refetch } = useTickets(
-    queryParams as Parameters<typeof useTickets>[0],
-  );
+  const { data, isLoading, isFetching, refetch } = useMyWorkTickets(username);
 
   const rows          = data?.content       ?? [];
   const totalElements = data?.totalElements ?? 0;
@@ -172,7 +147,7 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
   const displayPage   = pagination.page + 1;
 
   function viewDetail(t: TicketResponse) {
-    pushView({ module: 'tickets', subView: 'detail', selectedId: t.id });
+    pushView({ module: 'my-work', subView: 'detail', selectedId: t.id });
   }
 
   // ── Pagination ─────────────────────────────────────────────────────────────
@@ -236,16 +211,14 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
     );
   }
 
-  // ── Table header ───────────────────────────────────────────────────────────
+  // ── Table header helpers ───────────────────────────────────────────────────
 
   const TH = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <th
-      className={cn(
-        'px-3 py-2.5 border-b border-[var(--border)] text-left whitespace-nowrap',
-        'text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[var(--ink-light)]',
-        className,
-      )}
-    >
+    <th className={cn(
+      'px-3 py-2.5 border-b border-[var(--border)] text-left whitespace-nowrap',
+      'text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[var(--ink-light)]',
+      className,
+    )}>
       {children}
     </th>
   );
@@ -256,7 +229,7 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
     </td>
   );
 
-  // ── Skeleton rows ─────────────────────────────────────────────────────────
+  // ── Skeleton rows ──────────────────────────────────────────────────────────
 
   function SkeletonRow() {
     return (
@@ -266,37 +239,15 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
             <div
               className="h-3 rounded-md"
               style={{
-                width: `${50 + (i % 4) * 12}%`,
-                background: `linear-gradient(90deg, var(--border) 25%, var(--ghost) 50%, var(--border) 75%)`,
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 1.6s infinite',
+                width:           `${50 + (i % 4) * 12}%`,
+                background:      'linear-gradient(90deg, var(--border) 25%, var(--ghost) 50%, var(--border) 75%)',
+                backgroundSize:  '200% 100%',
+                animation:       'shimmer 1.6s infinite',
               }}
             />
           </td>
         ))}
       </tr>
-    );
-  }
-
-  // ── No project selected guard ───────────────────────────────────────────────
-
-  if (!projectCode) {
-    return (
-      <div className={cn(
-        'flex flex-col items-center gap-3 py-16 text-center',
-        !flat && 'bg-[var(--surface)] border border-[var(--border)] rounded-[14px]',
-      )}>
-        <div className="w-12 h-12 rounded-[14px] bg-[var(--ghost)] border border-[var(--border)]
-                        flex items-center justify-center">
-          <Clock size={20} className="text-[var(--ink-light)]" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-[var(--ink)]">Select a project</p>
-          <p className="text-xs text-[var(--ink-light)] mt-1">
-            Choose a project from the filter above to view tickets.
-          </p>
-        </div>
-      </div>
     );
   }
 
@@ -317,16 +268,6 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
           )}
         </p>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<Download size={13} />}
-            onClick={() => setExportOpen(true)}
-            disabled={rows.length === 0}
-            title="Export to Excel"
-          >
-            Export
-          </Button>
           <Select
             options={PAGE_SIZE_OPTIONS}
             value={String(pagination.size)}
@@ -340,14 +281,14 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
             className="h-8 w-8 flex items-center justify-center rounded-[8px]
                        border border-[var(--border)] bg-[var(--ghost)]
                        text-[#3B82F6] hover:border-[#3B82F6] hover:bg-[#EFF6FF]
-                       transition-colors duration-150 disabled:opacity-40"
+                       transition-colors duration-150"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {/* ── Mobile: card layout ─────────────────────────────────────────────── */}
+      {/* ── Mobile: card layout ──────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:hidden">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => (
@@ -379,7 +320,7 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
               ))}
       </div>
 
-      {/* ── Desktop: table ──────────────────────────────────────────────────── */}
+      {/* ── Desktop: table ───────────────────────────────────────────────────── */}
       <div className={cn(
         'hidden sm:block overflow-hidden',
         !flat && 'bg-[var(--surface)] border border-[var(--border)] rounded-[14px]',
@@ -399,10 +340,10 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
                 <TH>Service</TH>
                 <TH>Escalation</TH>
                 <TH>Requested By</TH>
+                <TH>Assigned To</TH>
                 <TH>Description</TH>
                 <TH>Status</TH>
                 <TH className="min-w-[12rem]">Resolved By</TH>
-                <TH>Resolved At</TH>
                 <TH>Duration</TH>
                 <TH className="text-right pr-4">Actions</TH>
               </tr>
@@ -430,8 +371,8 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
                     </tr>
                   )
                   : rows.map((t: TicketResponse) => {
-                      const canUpdate  = !!STATUS_TRANSITIONS[t.status];
-                      const escalated  = isEscalated(t.escalationLevel);
+                      const canUpdate = !!STATUS_TRANSITIONS[t.status];
+                      const escalated = isEscalated(t.escalationLevel);
                       return (
                         <tr
                           key={t.id}
@@ -500,6 +441,7 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
                           <TD>
                             <span className="text-xs whitespace-nowrap">{t.escalationType}</span>
                           </TD>
+                          {/* Requested By */}
                           <TD>
                             {t.creator ? (
                               <div className="flex flex-col gap-0.5">
@@ -514,11 +456,23 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
                               <span className="text-xs text-[var(--ink-light)]">—</span>
                             )}
                           </TD>
+                          {/* Assigned To */}
+                          <TD>
+                            {t.assignedTo ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs font-medium text-[var(--ink)]">
+                                  {t.assignedTo.fullName}
+                                </span>
+                                <span className="text-[0.65rem] text-[var(--ink-light)]">
+                                  {t.assignedTo.username}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-[var(--ink-light)]">—</span>
+                            )}
+                          </TD>
                           <TD className="max-w-[200px]">
-                            <span
-                              className="text-xs block truncate"
-                              title={t.description}
-                            >
+                            <span className="text-xs block truncate" title={t.description}>
                               {t.description}
                             </span>
                           </TD>
@@ -529,11 +483,6 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
                             {t.resolvedBy
                               ? <span className="text-xs text-[var(--ink)] font-mono whitespace-nowrap">{t.resolvedBy}</span>
                               : <span className="text-xs text-[var(--ink-light)]">—</span>}
-                          </TD>
-                          <TD>
-                            <span className="text-xs whitespace-nowrap">
-                              {t.resolvedAt ? formatLocalDateTime(t.resolvedAt) : '—'}
-                            </span>
                           </TD>
                           <TD>
                             <span className="font-mono text-xs">
@@ -601,13 +550,6 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
           </Button>
         </div>
       )}
-
-      <TicketExportDialog
-        open={exportOpen}
-        onClose={() => setExportOpen(false)}
-        rows={rows}
-        context={`tickets_${activeTab}`}
-      />
     </div>
   );
 }

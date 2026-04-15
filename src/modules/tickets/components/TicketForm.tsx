@@ -6,7 +6,7 @@ import { AttachmentUploader }            from './AttachmentUploader';
 import { useRaiseTicket,
          useActiveProjectCodes,
          useCenterCodesByProjects,
-         useServiceEscalationGroups }    from '../hooks';
+         useProjectServiceGroups }       from '../hooks';
 import { useTicketStore }                from '../store';
 import type { Attachment }               from '../../../services/ticket.service';
 
@@ -52,19 +52,21 @@ export function TicketForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Lookups
-  const { data: projects       = [], isLoading: loadingProjects } = useActiveProjectCodes();
-  const { data: centers        = [], isLoading: loadingCenters  } =
+  const { data: projects  = [], isLoading: loadingProjects } = useActiveProjectCodes();
+  const { data: centers   = [], isLoading: loadingCenters  } =
     useCenterCodesByProjects(form.projectCode ? [form.projectCode] : []);
-  const { data: svcGroups      = [], isLoading: loadingServices } = useServiceEscalationGroups();
+  // Services + escalation types scoped to the selected project
+  const { data: svcGroups = [], isLoading: loadingServices } =
+    useProjectServiceGroups(form.projectCode || undefined);
 
-  // Derived from grouped escalation data
-  const serviceOptions   = svcGroups.map((g) => ({ value: g.serviceName, label: g.serviceName }));
-  const escalationTypes  = svcGroups.find((g) => g.serviceName === form.serviceName)?.escalationTypes ?? [];
+  // Derived from project-scoped grouped data
+  const serviceOptions  = svcGroups.map((g) => ({ value: g.serviceName, label: g.serviceName }));
+  const escalationTypes = svcGroups.find((g) => g.serviceName === form.serviceName)?.escalationTypes ?? [];
 
   function set(field: keyof typeof EMPTY_FORM, value: string) {
     if (field === 'projectCode') {
-      // Changing project resets center and escalation type
-      setForm((f) => ({ ...f, projectCode: value, centerCode: '', escalationType: '' }));
+      // Changing project resets center, service and escalation type
+      setForm((f) => ({ ...f, projectCode: value, centerCode: '', serviceName: '', escalationType: '' }));
     } else if (field === 'serviceName') {
       // Changing service resets escalation type
       setForm((f) => ({ ...f, serviceName: value, escalationType: '' }));
@@ -202,13 +204,22 @@ export function TicketForm() {
             searchable
           />
 
-          {/* Service — unique service names from grouped escalation data */}
+          {/* Service — scoped to selected project via GET /projects/services?projectCode=... */}
           <Select
             label="Service *"
-            placeholder={loadingServices ? 'Loading…' : 'Select service…'}
+            placeholder={
+              !form.projectCode
+                ? 'Select project first'
+                : loadingServices
+                  ? 'Loading…'
+                  : serviceOptions.length === 0
+                    ? 'No services for this project'
+                    : 'Select service…'
+            }
             value={form.serviceName}
             onChange={(v) => set('serviceName', v)}
             options={serviceOptions}
+            disabled={!form.projectCode || loadingServices}
             error={errors.serviceName}
           />
 

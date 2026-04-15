@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Ticket,
+  ClipboardList,
   Users,
   SlidersHorizontal,
   FolderOpen,
@@ -39,6 +40,14 @@ export const NAV_ENTRIES: NavEntry[] = [
     label: 'Dashboard',
     path: '/',
     icon: LayoutDashboard,
+  },
+  {
+    type: 'item',
+    id: 'my-work',
+    label: 'My Work',
+    path: '/my-work',
+    icon: ClipboardList,
+    clientHidden: true,
   },
   {
     type: 'item',

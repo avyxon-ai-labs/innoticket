@@ -4,7 +4,7 @@ import { Download, X }              from 'lucide-react';
 import { createPortal }             from 'react-dom';
 import { cn }                       from '../../../../utils';
 import { Button }                   from '../../../../components/ui/Button';
-import { useActiveServiceNames }    from '../hooks';
+// useActiveServiceNames removed — service names are now derived from row data directly
 import type { CenterGridResponse }  from '../../../../services/center-grid.service';
 
 // ── Fixed column definitions ───────────────────────────────────────────────────
@@ -39,25 +39,12 @@ interface Props {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function CenterGridExportDialog({ open, onClose, rows }: Props) {
-  // All active service names from server + any present in current rows
-  const { data: activeServices = [] } = useActiveServiceNames();
-
   // Collect every service name present in the loaded rows
-  const rowServices = useMemo(() => {
+  const allServices = useMemo(() => {
     const s = new Set<string>();
-    rows.forEach((r) => Object.keys(r.serviceMappings).forEach((k) => s.add(k)));
+    rows.forEach((r) => r.serviceMappings.forEach((m) => s.add(m.serviceName)));
     return [...s].sort();
   }, [rows]);
-
-  // Union: active services first (deterministic order), then any extras from rows
-  const allServices = useMemo(() => {
-    const seen = new Set<string>();
-    const result: string[] = [];
-    for (const s of [...activeServices, ...rowServices]) {
-      if (!seen.has(s)) { seen.add(s); result.push(s); }
-    }
-    return result.sort();
-  }, [activeServices, rowServices]);
 
   // Selection state — everything on by default
   const allKeys = useMemo(
@@ -92,7 +79,9 @@ export function CenterGridExportDialog({ open, onClose, rows }: Props) {
         row[col.label] = col.getValue(r) ?? '';
       }
       for (const svc of activeSvcs) {
-        row[`${svc} (Agent Email)`] = r.serviceMappings[svc] ?? '';
+        const mapping = r.serviceMappings.find((m) => m.serviceName === svc);
+        row[`${svc} (Delivery Agent)`] = mapping?.deliveryAgent ?? '';
+        row[`${svc} (OPS Agent)`]      = mapping?.opsAgent      ?? '';
       }
       return row;
     });
@@ -102,18 +91,9 @@ export function CenterGridExportDialog({ open, onClose, rows }: Props) {
     // Auto-width
     const headers = [
       ...activeFixed.map((c) => c.label),
-      ...activeSvcs.map((s) => `${s} (Agent Email)`),
+      ...activeSvcs.flatMap((s) => [`${s} (Delivery Agent)`, `${s} (OPS Agent)`]),
     ];
-    ws['!cols'] = headers.map((h) => {
-      const maxData = rows.reduce((mx, r) => {
-        const key = FIXED_COLS.find((c) => c.label === h)?.key;
-        const val = key
-          ? String(FIXED_COLS.find((c) => c.label === h)?.getValue(r) ?? '')
-          : String(r.serviceMappings[h.replace(' (Agent Email)', '')] ?? '');
-        return Math.max(mx, val.length);
-      }, 0);
-      return { wch: Math.min(Math.max(h.length, maxData) + 2, 60) };
-    });
+    ws['!cols'] = headers.map((h) => ({ wch: Math.min(Math.max(h.length, 12) + 2, 60) }));
 
     ws['!freeze'] = { xSplit: 0, ySplit: 1 };
 
@@ -213,14 +193,15 @@ export function CenterGridExportDialog({ open, onClose, rows }: Props) {
             <>
               <p className="text-[0.65rem] font-semibold uppercase tracking-wider
                             text-[var(--ink-light)] mb-2">
-                Service columns <span className="normal-case font-normal">(agent email per service)</span>
+                Service columns{' '}
+                <span className="normal-case font-normal">(delivery + OPS agent per service)</span>
               </p>
               <div className="grid grid-cols-2 gap-1.5">
                 {allServices.map((svc) => {
                   const key     = `svc::${svc}`;
                   const checked = selected.has(key);
                   return (
-                    <ColPill key={key} label={`${svc} (Agent Email)`} checked={checked}
+                    <ColPill key={key} label={svc} checked={checked}
                              onToggle={() => toggle(key)} />
                   );
                 })}

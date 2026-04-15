@@ -57,7 +57,7 @@ function PhaseCell({ phase }: { phase: string }) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function JobTable() {
+export function JobTable({ flat = false }: { flat?: boolean }) {
   const {
     filters, pagination, liveTracking,
     setPage, setSize,
@@ -158,7 +158,7 @@ export function JobTable() {
         <JobBulkActionBar totalOnPage={rows.length} />
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-0.5 flex-wrap gap-2">
+        <div className="flex items-center justify-between px-4 pt-3 flex-wrap gap-2">
           <p className="text-xs text-[var(--ink-light)]">
             {isLoading ? 'Loading…' : `${totalElements} job${totalElements !== 1 ? 's' : ''}`}
             {isFetching && !isLoading && (
@@ -177,7 +177,7 @@ export function JobTable() {
         </div>
 
         {/* Table */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
+        <div className={flat ? 'overflow-hidden' : 'bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden'}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px] border-collapse">
               <thead>
@@ -352,7 +352,7 @@ export function JobTable() {
             </table>
           </div>
 
-          {totalElements > pagination.size && <PaginationBar />}
+          {totalElements > 0 && <PaginationBar />}
         </div>
       </div>
 

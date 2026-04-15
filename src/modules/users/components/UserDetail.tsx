@@ -114,6 +114,27 @@ export function UserDetail({ userId }: { userId: number }) {
             {user.roleCode}
           </span>
         } />
+        <Field label="Group"      value={
+          user.userGroup
+            ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold
+                               font-mono tracking-wide"
+                   style={{
+                     backgroundColor: user.userGroup === 'OPS' ? '#EFF6FF' : '#F0FDF4',
+                     color:           user.userGroup === 'OPS' ? '#1D4ED8' : '#15803D',
+                   }}>
+                {user.userGroup}
+              </span>
+            )
+            : '—'
+        } />
+        {user.roleCode === 'CLIENT' && (
+          <Field label="Project Code" value={
+            user.projectCode
+              ? <span className="font-mono text-sm">{user.projectCode}</span>
+              : '—'
+          } />
+        )}
       </Section>
 
       {/* Access */}

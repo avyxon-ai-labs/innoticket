@@ -1,10 +1,10 @@
-import { useRef, useEffect }  from 'react';
-import { Search, X }          from 'lucide-react';
-import { Input }              from '../../../components/ui/Input';
-import { Select }             from '../../../components/ui/Select';
-import { MultiSelect }        from '../../../components/ui/MultiSelect';
-import { Button }             from '../../../components/ui/Button';
-import { useTicketStore }     from '../store';
+import { useRef, useEffect } from 'react';
+import { Search, X }       from 'lucide-react';
+import { Input }           from '../../../components/ui/Input';
+import { Select }          from '../../../components/ui/Select';
+import { MultiSelect }     from '../../../components/ui/MultiSelect';
+import { Button }          from '../../../components/ui/Button';
+import { useMyWorkStore }  from '../store';
 import {
   useActiveProjectCodes,
   useProjectServiceGroups,
@@ -13,18 +13,18 @@ import {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function TicketFilters() {
+export function MyWorkFilters() {
   const {
     filters,
     setSearch, setProjectCode, setCenterCodes, setServices, clearFilters,
-  } = useTicketStore();
+  } = useMyWorkStore();
 
   const projectCode = typeof filters.projectCode === 'string' ? filters.projectCode : '';
   const centerCodes = Array.isArray(filters.centerCodes) ? filters.centerCodes : [];
   const services    = Array.isArray(filters.services)    ? filters.services    : [];
 
   const { data: allProjects = [], isLoading: loadingProjects } = useActiveProjectCodes();
-  const { data: svcGroups  = [], isLoading: loadingServices } =
+  const { data: svcGroups  = [], isLoading: loadingServices  } =
     useProjectServiceGroups(projectCode || undefined);
   const { data: allCenters  = [], isLoading: loadingCenters  } =
     useCenterCodesByProjects(projectCode ? [projectCode] : []);
@@ -40,6 +40,7 @@ export function TicketFilters() {
 
   const hasActive =
     !!filters.search ||
+    !!projectCode    ||
     centerCodes.length > 0 ||
     services.length    > 0;
 
@@ -63,13 +64,13 @@ export function TicketFilters() {
         wrapClass="w-full sm:w-56"
       />
 
-      {/* Project — single mandatory select, always has a value */}
+      {/* Project — optional in My Work (no auto-select) */}
       <Select
-        placeholder={loadingProjects ? 'Loading…' : 'Select project…'}
+        placeholder={loadingProjects ? 'Loading…' : 'All projects'}
         value={projectCode}
         onChange={setProjectCode}
         options={projectOptions}
-        wrapClass="w-full sm:w-[26rem]"
+        wrapClass="w-full sm:w-[22rem]"
       />
 
       {/* Center codes — disabled until project is selected */}
@@ -81,7 +82,7 @@ export function TicketFilters() {
         loading={loadingCenters}
         disabled={!projectCode}
         searchable
-        wrapClass="w-full sm:w-[26rem]"
+        wrapClass="w-full sm:w-[22rem]"
       />
 
       {/* Services — scoped to selected project */}
@@ -95,12 +96,12 @@ export function TicketFilters() {
         wrapClass="w-full sm:w-44"
       />
 
-      {/* Clear — only clears non-project filters, keeps project */}
+      {/* Clear */}
       {hasActive && (
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => clearFilters(projectCode)}
+          onClick={() => clearFilters()}
           leftIcon={<X size={13} />}
         >
           Clear

@@ -359,7 +359,7 @@ export function DashboardTicketTable({ flat = false }: { flat?: boolean }) {
             </tbody>
           </table>
         </div>
-        {totalElements > pagination.size && <PaginationBar />}
+        {totalElements > 0 && <PaginationBar />}
       </div>
 
       <TicketExportDialog

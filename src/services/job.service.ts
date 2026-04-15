@@ -66,7 +66,7 @@ export const jobService = {
 
 // ── Bulk service ──────────────────────────────────────────────────────────────
 
-export type BulkJobType = 'BULK_CENTER_GRID_ADD';
+export type BulkJobType = 'BULK_CENTER_GRID_ADD' | 'BULK_USER_ADD';
 
 export const bulkService = {
   /** Download the Excel template for a bulk operation */

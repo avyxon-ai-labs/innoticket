@@ -34,58 +34,41 @@ export function TicketsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:gap-0">
-        {/* Title row */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-xl font-bold text-[var(--ink)] leading-tight">Tickets</h1>
-            <p className="mt-0.5 text-sm text-[var(--ink-light)]">
-              Manage and track service escalation tickets.
-            </p>
-          </div>
-
-          {/* Desktop: summary chips + raise button in one row */}
-          <div className="hidden sm:flex items-center gap-2">
-            <TicketSummaryBar />
-            <div className="w-px h-5 bg-[var(--border)] mx-1" />
-            <Button onClick={openCreate} leftIcon={<Plus size={15} />}>
-              Raise Ticket
-            </Button>
-          </div>
-
-          {/* Mobile: just the raise button */}
-          <div className="sm:hidden">
-            <Button onClick={openCreate} leftIcon={<Plus size={15} />} size="sm">
-              Raise Ticket
-            </Button>
-          </div>
+      {/* ── 1. Title card ───────────────────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] px-5 py-4
+                      flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-bold text-[var(--ink)] leading-tight">Tickets</h1>
+          <p className="mt-0.5 text-sm text-[var(--ink-light)]">
+            Manage and track service escalation tickets.
+          </p>
         </div>
 
-        {/* Mobile: summary chips on their own row */}
-        <div className="sm:hidden">
+        {/* Summary chips + raise button */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <TicketSummaryBar />
+          <div className="w-px h-5 bg-[var(--border)] mx-1 hidden sm:block" />
+          <Button onClick={openCreate} leftIcon={<Plus size={14} />} size="sm">
+            Raise Ticket
+          </Button>
         </div>
       </div>
 
-      {/* Card: tabs + filters + table */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[16px] overflow-hidden flex flex-col">
+      {/* ── 2. Filters card ─────────────────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] px-5 py-3">
+        <TicketFilters />
+      </div>
+
+      {/* ── 3. Table card ───────────────────────────────────────────────────── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden flex flex-col">
         {/* Status tabs */}
         <div className="px-4 pt-3 pb-0 border-b border-[var(--border)]">
           <TicketTabs />
         </div>
-
-        {/* Filters */}
-        <div className="px-4 pt-4 pb-2">
-          <TicketFilters />
-        </div>
-
-        {/* Table (flat — card already provided above) */}
-        <div className="px-4 pb-4">
-          <TicketTable flat />
-        </div>
+        {/* Table */}
+        <TicketTable flat />
       </div>
 
       {/* Modals */}

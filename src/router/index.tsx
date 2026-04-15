@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedLayout }          from '../layouts/ProtectedLayout';
 import { AuthLayout }               from '../layouts/AuthLayout';
 import { DashboardPage }            from '../pages/DashboardPage';
+import { MyWorkPage }               from '../pages/MyWorkPage';
 import { TicketsPage }              from '../pages/TicketsPage';
 import { JobsPage }                 from '../pages/JobsPage';
 import { ServiceEscalationsPage }   from '../pages/ServiceEscalationsPage';
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
     element: <ProtectedLayout />,
     children: [
       { index: true,          element: <DashboardPage /> },
+      { path: 'my-work',      element: <MyWorkPage /> },
       { path: 'tickets',      element: <TicketsPage /> },
       { path: 'users',        element: <UsersPage /> },
       { path: 'jobs',         element: <JobsPage /> },
