@@ -213,6 +213,7 @@ export function DashboardTicketTable({ flat = false }: { flat?: boolean }) {
                 <TH>Date & Time</TH>
                 <TH>Centre Code</TH>
                 <TH>Centre Name</TH>
+                <TH>City</TH>
                 <TH>State</TH>
                 <TH>Service</TH>
                 {!isClient && <TH>Escalation</TH>}
@@ -229,7 +230,7 @@ export function DashboardTicketTable({ flat = false }: { flat?: boolean }) {
               {isLoading
                 ? Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i} className="border-t border-[var(--border)]">
-                      {Array.from({ length: isClient ? 13 : 15 }).map((__, j) => (
+                      {Array.from({ length: isClient ? 14 : 16 }).map((__, j) => (
                         <td key={j} className="px-3 py-3">
                           <div className="h-3 rounded-md"
                                style={{
@@ -245,7 +246,7 @@ export function DashboardTicketTable({ flat = false }: { flat?: boolean }) {
                 : rows.length === 0
                   ? (
                     <tr>
-                      <td colSpan={isClient ? 13 : 15}>
+                      <td colSpan={isClient ? 14 : 16}>
                         <div className="flex flex-col items-center gap-3 py-14 text-center">
                           <div className="w-10 h-10 rounded-[12px] bg-[var(--ghost)] border border-[var(--border)]
                                           flex items-center justify-center">
@@ -292,6 +293,9 @@ export function DashboardTicketTable({ flat = false }: { flat?: boolean }) {
                           </TD>
                           <TD>
                             <span className="text-xs whitespace-nowrap">{t.center.centerName}</span>
+                          </TD>
+                          <TD>
+                            <span className="text-xs whitespace-nowrap">{t.center.city || '—'}</span>
                           </TD>
                           <TD>
                             <span className="text-xs">{t.center.state || '—'}</span>
