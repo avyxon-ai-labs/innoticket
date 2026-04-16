@@ -258,7 +258,9 @@ export function DashboardTicketTable({ flat = false }: { flat?: boolean }) {
                     </tr>
                   )
                   : rows.map((t: TicketResponse) => {
-                      const canUpdate = !!STATUS_TRANSITIONS[t.status];
+                      const isAdmin    = user?.role?.toUpperCase() === 'ADMIN';
+                      const isAssigned = t.assignedTo?.username === user?.username;
+                      const canUpdate  = !!STATUS_TRANSITIONS[t.status] && (isAdmin || isAssigned);
                       const escalated = !isClient && isEscalated(t.escalationLevel);
                       const dur       = formatActiveDuration(t.activeSince, t.activeEndedAt);
                       return (

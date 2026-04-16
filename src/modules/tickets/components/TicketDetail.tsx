@@ -230,7 +230,9 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
     );
   }
 
-  const canUpdate = !!STATUS_TRANSITIONS[ticket.status];
+  const isAdmin   = user?.role?.toUpperCase() === 'ADMIN';
+  const isAssigned = ticket.assignedTo?.username === user?.username;
+  const canUpdate = !!STATUS_TRANSITIONS[ticket.status] && (isAdmin || isAssigned);
   const isCreator = !!user && !!ticket.creator && user.username === ticket.creator.username;
 
   return (

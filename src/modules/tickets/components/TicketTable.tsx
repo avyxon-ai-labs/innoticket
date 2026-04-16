@@ -11,6 +11,7 @@ import { cn, formatLocalDateTime,
          formatDuration, truncate,
          formatActiveDuration }       from '../../../utils';
 import { useNavigationStore }         from '../../../store/navigationStore';
+import { useAuthStore }               from '../../../store/authStore';
 import { useTickets }                 from '../hooks';
 import { useTicketStore }             from '../store';
 import {
@@ -53,14 +54,15 @@ const PAGE_SIZE_OPTIONS = [
 
 function TicketCard({
   ticket,
+  canUpdate,
   onView,
   onUpdateStatus,
 }: {
   ticket: TicketResponse;
+  canUpdate: boolean;
   onView: () => void;
   onUpdateStatus: () => void;
 }) {
-  const canUpdate = !!STATUS_TRANSITIONS[ticket.status];
 
   return (
     <div
@@ -143,6 +145,7 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
   } = useTicketStore();
 
   const { pushView }  = useNavigationStore();
+  const user          = useAuthStore((s) => s.user);
   const [refetchKey,  setRefetchKey]  = useState(0);
   const [exportOpen,  setExportOpen]  = useState(false);
 
@@ -369,14 +372,20 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
                 </div>
               </div>
             )
-            : rows.map((t: TicketResponse) => (
-                <TicketCard
-                  key={t.id}
-                  ticket={t}
-                  onView={() => viewDetail(t)}
-                  onUpdateStatus={() => openStatusDialog(t.id)}
-                />
-              ))}
+            : rows.map((t: TicketResponse) => {
+                const isAdmin    = user?.role?.toUpperCase() === 'ADMIN';
+                const isAssigned = t.assignedTo?.username === user?.username;
+                const canUpdate  = !!STATUS_TRANSITIONS[t.status] && (isAdmin || isAssigned);
+                return (
+                  <TicketCard
+                    key={t.id}
+                    ticket={t}
+                    canUpdate={canUpdate}
+                    onView={() => viewDetail(t)}
+                    onUpdateStatus={() => openStatusDialog(t.id)}
+                  />
+                );
+              })}
       </div>
 
       {/* ── Desktop: table ──────────────────────────────────────────────────── */}
@@ -430,7 +439,9 @@ export function TicketTable({ flat = false }: { flat?: boolean }) {
                     </tr>
                   )
                   : rows.map((t: TicketResponse) => {
-                      const canUpdate  = !!STATUS_TRANSITIONS[t.status];
+                      const isAdmin    = user?.role?.toUpperCase() === 'ADMIN';
+                      const isAssigned = t.assignedTo?.username === user?.username;
+                      const canUpdate  = !!STATUS_TRANSITIONS[t.status] && (isAdmin || isAssigned);
                       const escalated  = isEscalated(t.escalationLevel);
                       return (
                         <tr

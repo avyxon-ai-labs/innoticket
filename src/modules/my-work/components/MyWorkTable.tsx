@@ -10,6 +10,7 @@ import { cn, formatLocalDateTime,
          formatDuration,
          formatActiveDuration }       from '../../../utils';
 import { useNavigationStore }         from '../../../store/navigationStore';
+import { useAuthStore }               from '../../../store/authStore';
 import { useMyWorkStore }             from '../store';
 import { useMyWorkTickets }           from '../hooks';
 import { useTicketStore }             from '../../tickets/store';
@@ -52,14 +53,15 @@ const PAGE_SIZE_OPTIONS = [
 
 function TicketCard({
   ticket,
+  canUpdate,
   onView,
   onUpdateStatus,
 }: {
   ticket: TicketResponse;
+  canUpdate: boolean;
   onView: () => void;
   onUpdateStatus: () => void;
 }) {
-  const canUpdate = !!STATUS_TRANSITIONS[ticket.status];
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-4 flex flex-col gap-3">
@@ -137,6 +139,7 @@ export function MyWorkTable({
   const { openStatusDialog } = useTicketStore();
 
   const { pushView }                    = useNavigationStore();
+  const user                            = useAuthStore((s) => s.user);
   const [refetchKey, setRefetchKey]     = useState(0);
 
   const { data, isLoading, isFetching, refetch } = useMyWorkTickets(username);
@@ -310,14 +313,20 @@ export function MyWorkTable({
                 </div>
               </div>
             )
-            : rows.map((t: TicketResponse) => (
-                <TicketCard
-                  key={t.id}
-                  ticket={t}
-                  onView={() => viewDetail(t)}
-                  onUpdateStatus={() => openStatusDialog(t.id)}
-                />
-              ))}
+            : rows.map((t: TicketResponse) => {
+                const isAdmin    = user?.role?.toUpperCase() === 'ADMIN';
+                const isAssigned = t.assignedTo?.username === user?.username;
+                const canUpdate  = !!STATUS_TRANSITIONS[t.status] && (isAdmin || isAssigned);
+                return (
+                  <TicketCard
+                    key={t.id}
+                    ticket={t}
+                    canUpdate={canUpdate}
+                    onView={() => viewDetail(t)}
+                    onUpdateStatus={() => openStatusDialog(t.id)}
+                  />
+                );
+              })}
       </div>
 
       {/* ── Desktop: table ───────────────────────────────────────────────────── */}
@@ -371,8 +380,10 @@ export function MyWorkTable({
                     </tr>
                   )
                   : rows.map((t: TicketResponse) => {
-                      const canUpdate = !!STATUS_TRANSITIONS[t.status];
-                      const escalated = isEscalated(t.escalationLevel);
+                      const isAdmin    = user?.role?.toUpperCase() === 'ADMIN';
+                      const isAssigned = t.assignedTo?.username === user?.username;
+                      const canUpdate  = !!STATUS_TRANSITIONS[t.status] && (isAdmin || isAssigned);
+                      const escalated  = isEscalated(t.escalationLevel);
                       return (
                         <tr
                           key={t.id}
