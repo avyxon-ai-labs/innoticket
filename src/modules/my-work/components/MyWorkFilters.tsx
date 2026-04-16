@@ -1,14 +1,15 @@
-import { useRef, useEffect } from 'react';
-import { Search, X }       from 'lucide-react';
-import { Input }           from '../../../components/ui/Input';
-import { Select }          from '../../../components/ui/Select';
-import { MultiSelect }     from '../../../components/ui/MultiSelect';
-import { Button }          from '../../../components/ui/Button';
-import { useMyWorkStore }  from '../store';
+import { useRef, useEffect, useMemo } from 'react';
+import { Search, X }                  from 'lucide-react';
+import { Input }                      from '../../../components/ui/Input';
+import { Select }                     from '../../../components/ui/Select';
+import { MultiSelect }                from '../../../components/ui/MultiSelect';
+import { Button }                     from '../../../components/ui/Button';
+import { useMyWorkStore }             from '../store';
 import {
   useActiveProjectCodes,
   useProjectServiceGroups,
   useCenterCodesByProjects,
+  useCenterDetailsByProject,
 } from '../hooks';
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -16,20 +17,39 @@ import {
 export function MyWorkFilters() {
   const {
     filters,
-    setSearch, setProjectCode, setCenterCodes, setServices, clearFilters,
+    setSearch, setProjectCode, setCenterCodes, setServices,
+    setStates, setCities, clearFilters,
   } = useMyWorkStore();
 
   const projectCode = typeof filters.projectCode === 'string' ? filters.projectCode : '';
   const centerCodes = Array.isArray(filters.centerCodes) ? filters.centerCodes : [];
   const services    = Array.isArray(filters.services)    ? filters.services    : [];
+  const states      = Array.isArray(filters.states)      ? filters.states      : [];
+  const cities      = Array.isArray(filters.cities)      ? filters.cities      : [];
 
-  const { data: allProjects = [], isLoading: loadingProjects } = useActiveProjectCodes();
-  const { data: svcGroups  = [], isLoading: loadingServices  } =
+  const { data: allProjects   = [], isLoading: loadingProjects } = useActiveProjectCodes();
+  const { data: svcGroups     = [], isLoading: loadingServices  } =
     useProjectServiceGroups(projectCode || undefined);
-  const { data: allCenters  = [], isLoading: loadingCenters  } =
+  const { data: allCenters    = [], isLoading: loadingCenters   } =
     useCenterCodesByProjects(projectCode ? [projectCode] : []);
+  const { data: centerDetails = [] } =
+    useCenterDetailsByProject(projectCode || undefined);
 
   const allServices = svcGroups.map((g) => g.serviceName);
+
+  // Derive unique states from center details
+  const stateOptions = useMemo(
+    () => [...new Set(centerDetails.map((c) => c.state).filter(Boolean))].sort(),
+    [centerDetails],
+  );
+
+  // Derive cities — filtered by selected states when states are chosen
+  const cityOptions = useMemo(() => {
+    const base = states.length > 0
+      ? centerDetails.filter((c) => states.includes(c.state))
+      : centerDetails;
+    return [...new Set(base.map((c) => c.city).filter(Boolean))].sort();
+  }, [centerDetails, states]);
 
   // Auto-select first project when list loads and nothing is selected
   useEffect(() => {
@@ -39,10 +59,12 @@ export function MyWorkFilters() {
   }, [allProjects, projectCode, setProjectCode]);
 
   const hasActive =
-    !!filters.search ||
-    !!projectCode    ||
+    !!filters.search   ||
+    !!projectCode      ||
     centerCodes.length > 0 ||
-    services.length    > 0;
+    services.length    > 0 ||
+    states.length      > 0 ||
+    cities.length      > 0;
 
   // Debounced search
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,7 +86,7 @@ export function MyWorkFilters() {
         wrapClass="w-full sm:w-56"
       />
 
-      {/* Project — optional in My Work (no auto-select) */}
+      {/* Project */}
       <Select
         placeholder={loadingProjects ? 'Loading…' : 'All projects'}
         value={projectCode}
@@ -73,7 +95,7 @@ export function MyWorkFilters() {
         wrapClass="w-full sm:w-[22rem]"
       />
 
-      {/* Center codes — disabled until project is selected */}
+      {/* Center codes */}
       <MultiSelect
         placeholder={!projectCode ? 'Select project first' : 'All centers'}
         options={allCenters}
@@ -85,7 +107,29 @@ export function MyWorkFilters() {
         wrapClass="w-full sm:w-[22rem]"
       />
 
-      {/* Services — scoped to selected project */}
+      {/* State */}
+      <MultiSelect
+        placeholder={!projectCode ? 'Select project first' : 'All states'}
+        options={stateOptions}
+        value={states}
+        onChange={setStates}
+        disabled={!projectCode || stateOptions.length === 0}
+        searchable
+        wrapClass="w-full sm:w-44"
+      />
+
+      {/* City — options filtered by selected states */}
+      <MultiSelect
+        placeholder={!projectCode ? 'Select project first' : 'All cities'}
+        options={cityOptions}
+        value={cities}
+        onChange={setCities}
+        disabled={!projectCode || cityOptions.length === 0}
+        searchable
+        wrapClass="w-full sm:w-44"
+      />
+
+      {/* Services */}
       <MultiSelect
         placeholder={!projectCode ? 'Select project first' : 'All services'}
         options={allServices}

@@ -7,6 +7,7 @@ import { useMyWorkStore }             from '../store';
 export {
   useActiveProjectCodes,
   useCenterCodesByProjects,
+  useCenterDetailsByProject,
   useProjectServiceGroups,
 } from '../../../modules/tickets/hooks';
 
@@ -39,6 +40,8 @@ export function useMyWorkTickets(username: string) {
   const projectCode = typeof filters.projectCode === 'string' ? filters.projectCode : '';
   const centerCodes = Array.isArray(filters.centerCodes) ? filters.centerCodes : [];
   const services    = Array.isArray(filters.services)    ? filters.services    : [];
+  const states      = Array.isArray(filters.states)      ? filters.states      : [];
+  const cities      = Array.isArray(filters.cities)      ? filters.cities      : [];
 
   const queryParams = {
     page:     pagination.page,
@@ -53,6 +56,8 @@ export function useMyWorkTickets(username: string) {
     ...(filters.search     && { search:       filters.search }),
     ...(centerCodes.length && { centerCodes:  centerCodes.join(',') }),
     ...(services.length    && { services:     services.join(',') }),
+    ...(states.length      && { states:       states.join(',')      }),
+    ...(cities.length      && { cities:       cities.join(',')      }),
   };
 
   return useQuery({

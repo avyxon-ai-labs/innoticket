@@ -8,10 +8,12 @@ export interface DashboardFilters {
   services:        string[];
   escalationTypes: string[];
   centreCodes:     string[];
+  states:          string[];
+  cities:          string[];
 }
 
 const DEFAULT_FILTERS: DashboardFilters = {
-  projectCode: '', services: [], escalationTypes: [], centreCodes: [],
+  projectCode: '', services: [], escalationTypes: [], centreCodes: [], states: [], cities: [],
 };
 
 interface DashboardStore {
@@ -29,6 +31,8 @@ interface DashboardStore {
   setServices:        (v: string[]) => void;
   setEscalationTypes: (v: string[]) => void;
   setCentreCodes:     (v: string[]) => void;
+  setStates:          (v: string[]) => void;
+  setCities:          (v: string[]) => void;
   clearFilters:       (keepProject?: string) => void;
   setDimension:       (d: AggregationDimension) => void;
   setActiveTab:       (t: TicketTab) => void;
@@ -48,14 +52,14 @@ export const useDashboardStore = create<DashboardStore>()(
 
       setProjectCode: (v) =>
         set((s) => ({
-          // Services + escalation types are project-scoped, so reset them
-          // alongside centreCodes whenever the project changes.
           filters: {
             ...s.filters,
             projectCode:     v,
             services:        [],
             escalationTypes: [],
             centreCodes:     [],
+            states:          [],
+            cities:          [],
           },
           pagination: { ...s.pagination, page: 0 },
         })),
@@ -75,6 +79,18 @@ export const useDashboardStore = create<DashboardStore>()(
       setCentreCodes: (v) =>
         set((s) => ({
           filters: { ...s.filters, centreCodes: v },
+          pagination: { ...s.pagination, page: 0 },
+        })),
+
+      setStates: (v) =>
+        set((s) => ({
+          filters: { ...s.filters, states: v, cities: [] },
+          pagination: { ...s.pagination, page: 0 },
+        })),
+
+      setCities: (v) =>
+        set((s) => ({
+          filters: { ...s.filters, cities: v },
           pagination: { ...s.pagination, page: 0 },
         })),
 

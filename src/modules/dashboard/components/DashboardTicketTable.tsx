@@ -61,16 +61,18 @@ export function DashboardTicketTable({ flat = false }: { flat?: boolean }) {
   const [refetchKey,  setRefetchKey]  = useState(0);
   const [exportOpen,  setExportOpen]  = useState(false);
 
-  const { projectCode, services, escalationTypes, centreCodes } = filters;
+  const { projectCode, services, escalationTypes, centreCodes, states, cities } = filters;
 
   const queryParams = {
     page:     pagination.page,
     size:     pagination.size,
     statuses: TAB_STATUSES[activeTab].join(','),
-    ...(projectCode          && { projectCodes:     projectCode            }),
-    ...(services.length      && { services:         services.join(',')     }),
-    ...(escalationTypes.length && { escalationTypes: escalationTypes.join(',') }),
-    ...(centreCodes.length   && { centerCodes:      centreCodes.join(',')  }),
+    ...(projectCode            && { projectCodes:     projectCode                }),
+    ...(services.length        && { services:         services.join(',')         }),
+    ...(escalationTypes.length && { escalationTypes:  escalationTypes.join(',')  }),
+    ...(centreCodes.length     && { centerCodes:      centreCodes.join(',')      }),
+    ...(states.length          && { states:           states.join(',')           }),
+    ...(cities.length          && { cities:           cities.join(',')           }),
     _k: refetchKey,
   };
 

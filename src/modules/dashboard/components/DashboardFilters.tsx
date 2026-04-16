@@ -1,34 +1,42 @@
-import { useEffect }          from 'react';
-import { X }                  from 'lucide-react';
-import { Select }             from '../../../components/ui/Select';
-import { MultiSelect }        from '../../../components/ui/MultiSelect';
-import { Button }             from '../../../components/ui/Button';
-import { useDashboardStore }  from '../store';
-import { useAuthStore }       from '../../../store/authStore';
+import { useEffect, useMemo }   from 'react';
+import { X }                     from 'lucide-react';
+import { Select }                from '../../../components/ui/Select';
+import { MultiSelect }           from '../../../components/ui/MultiSelect';
+import { Button }                from '../../../components/ui/Button';
+import { useDashboardStore }     from '../store';
+import { useAuthStore }          from '../../../store/authStore';
 import {
   useActiveProjectCodes,
   useCenterCodesByProjects,
   useProjectServiceGroups,
+  useCenterDetailsByProject,
 } from '../hooks';
 
 export function DashboardFilters() {
   const {
     filters,
-    setProjectCode, setServices, setEscalationTypes, setCentreCodes, clearFilters,
+    setProjectCode, setServices, setEscalationTypes, setCentreCodes,
+    setStates, setCities, clearFilters,
   } = useDashboardStore();
 
-  const { projectCode, services, escalationTypes, centreCodes } = filters;
+  const projectCode     = typeof filters.projectCode === 'string'         ? filters.projectCode     : '';
+  const services        = Array.isArray(filters.services)                 ? filters.services        : [];
+  const escalationTypes = Array.isArray(filters.escalationTypes)          ? filters.escalationTypes : [];
+  const centreCodes     = Array.isArray(filters.centreCodes)              ? filters.centreCodes     : [];
+  const states          = Array.isArray(filters.states)                   ? filters.states          : [];
+  const cities          = Array.isArray(filters.cities)                   ? filters.cities          : [];
 
-  const user      = useAuthStore((s) => s.user);
-  const isClient  = user?.role?.toUpperCase() === 'CLIENT';
+  const user          = useAuthStore((s) => s.user);
+  const isClient      = user?.role?.toUpperCase() === 'CLIENT';
   const clientProject = user?.projectCode ?? '';
 
-  const { data: allProjects = [], isLoading: loadingProjects } = useActiveProjectCodes();
-  // Services + escalation types scoped to the selected project
-  const { data: svcGroups  = [], isLoading: loadingSvc       } =
+  const { data: allProjects   = [], isLoading: loadingProjects } = useActiveProjectCodes();
+  const { data: svcGroups     = [], isLoading: loadingSvc       } =
     useProjectServiceGroups(projectCode || undefined);
-  const { data: allCentres = [], isLoading: loadingCentres   } =
+  const { data: allCentres    = [], isLoading: loadingCentres   } =
     useCenterCodesByProjects(projectCode ? [projectCode] : []);
+  const { data: centerDetails = [] } =
+    useCenterDetailsByProject(projectCode || undefined);
 
   // CLIENT: lock to their assigned project as soon as it is known
   useEffect(() => {
@@ -50,7 +58,26 @@ export function DashboardFilters() {
     : svcGroups.flatMap((g) => g.escalationTypes);
   const escalationOptions = [...new Set(availableTypes)].sort();
 
-  const hasActive = services.length > 0 || escalationTypes.length > 0 || centreCodes.length > 0;
+  // Derive unique states from center details
+  const stateOptions = useMemo(
+    () => [...new Set(centerDetails.map((c) => c.state).filter(Boolean))].sort(),
+    [centerDetails],
+  );
+
+  // Derive cities — filtered by selected states when states are chosen
+  const cityOptions = useMemo(() => {
+    const base = states.length > 0
+      ? centerDetails.filter((c) => states.includes(c.state))
+      : centerDetails;
+    return [...new Set(base.map((c) => c.city).filter(Boolean))].sort();
+  }, [centerDetails, states]);
+
+  const hasActive =
+    services.length    > 0 ||
+    escalationTypes.length > 0 ||
+    centreCodes.length > 0 ||
+    states.length      > 0 ||
+    cities.length      > 0;
 
   return (
     <div className="flex flex-wrap items-end gap-3">
@@ -66,11 +93,11 @@ export function DashboardFilters() {
           value={projectCode}
           onChange={setProjectCode}
           options={allProjects.map((p) => ({ value: p, label: p }))}
-          wrapClass="w-full sm:w-[26rem]"
+          wrapClass="w-full sm:w-[22rem]"
         />
       )}
 
-      {/* Services — scoped to selected project */}
+      {/* Services */}
       <MultiSelect
         placeholder={!projectCode ? 'Select project first' : 'All services'}
         options={serviceOptions}
@@ -91,7 +118,7 @@ export function DashboardFilters() {
         wrapClass="w-full sm:w-48"
       />
 
-      {/* Centre codes — depends on project */}
+      {/* Centre codes */}
       <MultiSelect
         placeholder={!projectCode ? 'Select project first' : 'All centres'}
         options={allCentres}
@@ -100,7 +127,29 @@ export function DashboardFilters() {
         loading={loadingCentres}
         disabled={!projectCode}
         searchable
-        wrapClass="w-full sm:w-[26rem]"
+        wrapClass="w-full sm:w-[22rem]"
+      />
+
+      {/* State */}
+      <MultiSelect
+        placeholder={!projectCode ? 'Select project first' : 'All states'}
+        options={stateOptions}
+        value={states}
+        onChange={setStates}
+        disabled={!projectCode || stateOptions.length === 0}
+        searchable
+        wrapClass="w-full sm:w-44"
+      />
+
+      {/* City — options filtered by selected states */}
+      <MultiSelect
+        placeholder={!projectCode ? 'Select project first' : 'All cities'}
+        options={cityOptions}
+        value={cities}
+        onChange={setCities}
+        disabled={!projectCode || cityOptions.length === 0}
+        searchable
+        wrapClass="w-full sm:w-44"
       />
 
       {hasActive && (

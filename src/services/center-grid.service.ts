@@ -27,6 +27,8 @@ export interface ProjectService {
 export interface CenterCodeItem {
   centerCode: string;
   centerName: string;
+  state:      string;
+  city:       string;
 }
 
 export interface CenterGridResponse {

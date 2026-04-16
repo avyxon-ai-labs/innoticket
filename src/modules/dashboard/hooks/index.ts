@@ -99,4 +99,4 @@ export function useProjectServiceGroups(projectCode: string | undefined) {
 }
 
 // Re-export lookup hooks
-export { useActiveProjectCodes, useCenterCodesByProjects };
+export { useActiveProjectCodes, useCenterCodesByProjects, useCenterDetailsByProject } from '../../configurations/center-grid/hooks';

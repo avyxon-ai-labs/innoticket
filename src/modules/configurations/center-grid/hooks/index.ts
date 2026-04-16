@@ -193,6 +193,22 @@ export function useActiveProjectCodes() {
 }
 
 /**
+ * Returns the full center detail list (code, name, state, city) for a single
+ * project. Used by filter bars to derive State and City multi-selects.
+ */
+export function useCenterDetailsByProject(projectCode: string | undefined) {
+  return useQuery({
+    queryKey: ['center-grids', 'codes-detail', projectCode ?? ''],
+    queryFn:  async () => {
+      const res = await centerGridService.getCodes(projectCode!);
+      return (res.data.data ?? []) as CenterCodeItem[];
+    },
+    enabled:   !!projectCode,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+/**
  * Center codes for selected project codes.
  * Makes one request per project code in parallel, then deduplicates.
  */

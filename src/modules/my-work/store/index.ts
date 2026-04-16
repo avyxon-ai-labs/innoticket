@@ -11,6 +11,8 @@ export interface MyWorkFiltersState {
   projectCode: string;
   centerCodes: string[];
   services:    string[];
+  states:      string[];
+  cities:      string[];
 }
 
 export interface MyWorkPagination {
@@ -19,7 +21,7 @@ export interface MyWorkPagination {
 }
 
 const DEFAULT_FILTERS: MyWorkFiltersState = {
-  search: '', projectCode: '', centerCodes: [], services: [],
+  search: '', projectCode: '', centerCodes: [], services: [], states: [], cities: [],
 };
 
 // ── Store interface ───────────────────────────────────────────────────────────
@@ -37,6 +39,8 @@ interface MyWorkUIStore {
   setProjectCode:  (v: string) => void;
   setCenterCodes:  (v: string[]) => void;
   setServices:     (v: string[]) => void;
+  setStates:       (v: string[]) => void;
+  setCities:       (v: string[]) => void;
   clearFilters:    () => void;
   setPage:         (p: number) => void;
   setSize:         (s: number) => void;
@@ -71,7 +75,7 @@ export const useMyWorkStore = create<MyWorkUIStore>()(
 
       setProjectCode: (v) =>
         set((s) => ({
-          filters:    { ...s.filters, projectCode: v, centerCodes: [], services: [] },
+          filters:    { ...s.filters, projectCode: v, centerCodes: [], services: [], states: [], cities: [] },
           pagination: { ...s.pagination, page: 0 },
         })),
 
@@ -84,6 +88,18 @@ export const useMyWorkStore = create<MyWorkUIStore>()(
       setServices: (v) =>
         set((s) => ({
           filters:    { ...s.filters, services: v },
+          pagination: { ...s.pagination, page: 0 },
+        })),
+
+      setStates: (v) =>
+        set((s) => ({
+          filters:    { ...s.filters, states: v, cities: [] },
+          pagination: { ...s.pagination, page: 0 },
+        })),
+
+      setCities: (v) =>
+        set((s) => ({
+          filters:    { ...s.filters, cities: v },
           pagination: { ...s.pagination, page: 0 },
         })),
 

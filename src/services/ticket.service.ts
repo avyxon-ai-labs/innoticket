@@ -143,6 +143,8 @@ export interface TicketQueryParams {
   centerCodes?:  string; // CSV
   services?:     string; // CSV
   search?:       string;
+  states?:       string; // CSV e.g. "Delhi,Uttar Pradesh"
+  cities?:       string; // CSV e.g. "Lucknow,Okhla"
   assignedTo?:   string;  // filter by assignee username (My Work — Assigned to Me)
   raisedBy?:     string;  // filter by creator username  (My Work — Raised by Me)
   myTeam?:       boolean; // filter by current user's team (My Work — My Team)

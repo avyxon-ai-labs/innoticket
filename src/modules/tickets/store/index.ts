@@ -9,6 +9,8 @@ export interface TicketFiltersState {
   projectCode: string;   // single mandatory project
   centerCodes: string[];
   services:    string[];
+  states:      string[];
+  cities:      string[];
 }
 
 export interface TicketPagination {
@@ -17,7 +19,7 @@ export interface TicketPagination {
 }
 
 const DEFAULT_FILTERS: TicketFiltersState = {
-  search: '', projectCode: '', centerCodes: [], services: [],
+  search: '', projectCode: '', centerCodes: [], services: [], states: [], cities: [],
 };
 
 // ── Store interface ───────────────────────────────────────────────────────────
@@ -33,6 +35,8 @@ interface TicketUIStore {
   setProjectCode:  (v: string) => void;
   setCenterCodes:  (v: string[]) => void;
   setServices:     (v: string[]) => void;
+  setStates:       (v: string[]) => void;
+  setCities:       (v: string[]) => void;
   clearFilters:    (keepProject?: string) => void;
   setPage:         (p: number) => void;
   setSize:         (s: number) => void;
@@ -67,7 +71,7 @@ export const useTicketStore = create<TicketUIStore>()(
 
       setProjectCode: (v) =>
         set((s) => ({
-          filters:    { ...s.filters, projectCode: v, centerCodes: [], services: [] },
+          filters:    { ...s.filters, projectCode: v, centerCodes: [], services: [], states: [], cities: [] },
           pagination: { ...s.pagination, page: 0 },
         })),
 
@@ -80,6 +84,19 @@ export const useTicketStore = create<TicketUIStore>()(
       setServices: (v) =>
         set((s) => ({
           filters:    { ...s.filters, services: v },
+          pagination: { ...s.pagination, page: 0 },
+        })),
+
+      setStates: (v) =>
+        set((s) => ({
+          // Clear cities when states change — selected cities may no longer belong to the new states
+          filters:    { ...s.filters, states: v, cities: [] },
+          pagination: { ...s.pagination, page: 0 },
+        })),
+
+      setCities: (v) =>
+        set((s) => ({
+          filters:    { ...s.filters, cities: v },
           pagination: { ...s.pagination, page: 0 },
         })),
 

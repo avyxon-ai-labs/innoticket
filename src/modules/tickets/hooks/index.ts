@@ -193,4 +193,4 @@ export function useEscalationTypesByService(serviceName: string | null) {
 }
 
 // Re-export lookup hooks so ticket components only import from one place
-export { useActiveProjectCodes, useActiveServiceNames, useCenterCodesByProjects };
+export { useActiveProjectCodes, useActiveServiceNames, useCenterCodesByProjects, useCenterDetailsByProject } from '../../configurations/center-grid/hooks';
