@@ -232,9 +232,8 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
 
   const isAdmin    = user?.role?.toUpperCase() === 'ADMIN';
   const isAssigned = ticket.assignedTo?.username === user?.username;
-  const isCreator  = ticket.creator?.username === user?.username;
+  const isCreator  = !!user && !!ticket.creator && user.username === ticket.creator.username;
   const canUpdate  = !!STATUS_TRANSITIONS[ticket.status] && (isAdmin || isAssigned || isCreator);
-  const isCreator = !!user && !!ticket.creator && user.username === ticket.creator.username;
 
   return (
     <div className="flex flex-col gap-4">
