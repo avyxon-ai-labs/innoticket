@@ -25,11 +25,18 @@ api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      // Lazy-import avoids circular dependency (authStore → api → authStore)
-      import('../store/authStore').then(({ useAuthStore }) => {
-        useAuthStore.getState().logout();
-      });
-      window.location.replace('/login');
+      // Auth endpoints (login, forgot-password, reset-password) return 401 for
+      // wrong credentials — let the error bubble back to the caller so it can
+      // display the backend message. Only redirect on a session-expiry 401.
+      const url = (error.config?.url ?? '') as string;
+      const isAuthEndpoint = url.includes('/auth/');
+      if (!isAuthEndpoint) {
+        // Lazy-import avoids circular dependency (authStore → api → authStore)
+        import('../store/authStore').then(({ useAuthStore }) => {
+          useAuthStore.getState().logout();
+        });
+        window.location.replace('/login');
+      }
     }
     return Promise.reject(error);
   },
