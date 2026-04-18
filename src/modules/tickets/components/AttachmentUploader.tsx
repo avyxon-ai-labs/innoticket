@@ -47,7 +47,24 @@ export function AttachmentUploader({
 
   async function handleFiles(files: FileList | null) {
     if (!files || disabled) return;
-    const toUpload = Array.from(files).slice(0, maxFiles - value.length);
+    const raw = Array.from(files).slice(0, maxFiles - value.length);
+
+    // Eagerly copy each file's bytes into JS heap memory before any await/state
+    // update. Camera-captured photos on iOS/Android are backed by a volatile
+    // temp path that the OS can reclaim during async gaps — reading into an
+    // ArrayBuffer here makes the upload independent of that temp file's lifetime.
+    const toUpload = await Promise.all(
+      raw.map(async (f) => {
+        try {
+          const buf  = await f.arrayBuffer();
+          const mime = f.type || 'image/jpeg';
+          const blob = new Blob([buf], { type: mime });
+          return new File([blob], f.name || 'photo.jpg', { type: mime });
+        } catch {
+          return f; // fallback to original if arrayBuffer() fails
+        }
+      }),
+    );
 
     const newItems: UploadItem[] = toUpload.map((f) => ({
       id:         Math.random().toString(36).slice(2),
