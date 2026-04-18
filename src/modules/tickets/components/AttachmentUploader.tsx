@@ -34,6 +34,7 @@ interface UploadItem {
   status:     'uploading' | 'done' | 'error';
   attachment: Attachment | null;
   errorMsg:   string | null;
+  debugInfo?: string; // ⚠️ TEMP — remove before release
 }
 
 export function AttachmentUploader({
@@ -49,29 +50,33 @@ export function AttachmentUploader({
     if (!files || disabled) return;
     const raw = Array.from(files).slice(0, maxFiles - value.length);
 
-    // Eagerly copy each file's bytes into JS heap memory before any await/state
-    // update. Camera-captured photos on iOS/Android are backed by a volatile
-    // temp path that the OS can reclaim during async gaps — reading into an
-    // ArrayBuffer here makes the upload independent of that temp file's lifetime.
-    const toUpload = await Promise.all(
-      raw.map(async (f) => {
+    // ⚠️ TEMP DEBUG: collect per-file info before & after arrayBuffer copy
+    type FileDebug = { orig: string; copied: string; file: File };
+    const debugged = await Promise.all(
+      raw.map(async (f): Promise<FileDebug> => {
+        const orig = `orig: name="${f.name}" size=${f.size} type="${f.type || '(empty)'}"`;
         try {
           const buf  = await f.arrayBuffer();
           const mime = f.type || 'image/jpeg';
           const blob = new Blob([buf], { type: mime });
-          return new File([blob], f.name || 'photo.jpg', { type: mime });
-        } catch {
-          return f; // fallback to original if arrayBuffer() fails
+          const copy = new File([blob], f.name || 'photo.jpg', { type: mime });
+          const copied = `copy: name="${copy.name}" size=${copy.size} type="${copy.type}"`;
+          return { orig, copied, file: copy };
+        } catch (e) {
+          return { orig, copied: `arrayBuffer() FAILED: ${String(e)}`, file: f };
         }
       }),
     );
 
-    const newItems: UploadItem[] = toUpload.map((f) => ({
+    const toUpload = debugged.map((d) => d.file);
+
+    const newItems: UploadItem[] = toUpload.map((f, idx) => ({
       id:         Math.random().toString(36).slice(2),
       file:       f,
       status:     'uploading',
       attachment: null,
       errorMsg:   null,
+      debugInfo:  debugged[idx].orig + ' | ' + debugged[idx].copied,
     }));
 
     setItems((prev) => [...prev, ...newItems]);
@@ -89,11 +94,22 @@ export function AttachmentUploader({
             ),
           );
           return att;
-        } catch {
+        } catch (err: unknown) {
+          // ⚠️ TEMP DEBUG: surface full error details on screen
+          const e = err as Record<string, unknown>;
+          const status  = (e?.response as Record<string, unknown>)?.status;
+          const srvMsg  = ((e?.response as Record<string, unknown>)?.data as Record<string, unknown>)?.message;
+          const netMsg  = e?.message;
+          const debugErr = [
+            status  ? `HTTP ${status}`          : null,
+            srvMsg  ? `server: "${srvMsg}"`      : null,
+            netMsg  ? `err: "${String(netMsg)}"` : null,
+          ].filter(Boolean).join(' | ') || 'unknown error';
+
           setItems((prev) =>
             prev.map((i) =>
               i.id === item.id
-                ? { ...i, status: 'error', errorMsg: 'Upload failed' }
+                ? { ...i, status: 'error', errorMsg: debugErr }
                 : i,
             ),
           );
@@ -206,31 +222,39 @@ export function AttachmentUploader({
         <div
           key={item.id}
           className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-[10px] border',
+            'flex flex-col gap-1 px-3 py-2 rounded-[10px] border',
             item.status === 'error'
               ? 'bg-[#FEF2F2] border-[#FECACA]'
               : 'bg-[var(--ghost)] border-[var(--border)]',
           )}
         >
-          {item.status === 'uploading' ? (
-            <Paperclip size={13} className="text-[var(--ink-light)] animate-pulse" />
-          ) : (
-            <AlertCircle size={13} className="text-[#DC2626] shrink-0" />
+          <div className="flex items-center gap-2">
+            {item.status === 'uploading' ? (
+              <Paperclip size={13} className="text-[var(--ink-light)] animate-pulse" />
+            ) : (
+              <AlertCircle size={13} className="text-[#DC2626] shrink-0" />
+            )}
+            <span className="flex-1 text-xs truncate text-[var(--ink)]">{item.file.name}</span>
+            {item.status === 'uploading' && (
+              <span className="text-[0.65rem] text-[var(--ink-light)]">Uploading…</span>
+            )}
+            {item.status === 'error' && (
+              <span className="text-[0.65rem] font-semibold text-[#DC2626]">{item.errorMsg}</span>
+            )}
+            <button
+              type="button"
+              onClick={() => removeItem(item.id)}
+              className="p-0.5 rounded hover:bg-[var(--border)] transition-colors"
+            >
+              <X size={12} />
+            </button>
+          </div>
+          {/* ⚠️ TEMP DEBUG — remove before release */}
+          {item.debugInfo && (
+            <p className="text-[0.6rem] font-mono text-[#7C3AED] break-all leading-relaxed">
+              {item.debugInfo}
+            </p>
           )}
-          <span className="flex-1 text-xs truncate text-[var(--ink)]">{item.file.name}</span>
-          {item.status === 'uploading' && (
-            <span className="text-[0.65rem] text-[var(--ink-light)]">Uploading…</span>
-          )}
-          {item.status === 'error' && (
-            <span className="text-[0.65rem] text-[#DC2626]">{item.errorMsg}</span>
-          )}
-          <button
-            type="button"
-            onClick={() => removeItem(item.id)}
-            className="p-0.5 rounded hover:bg-[var(--border)] transition-colors"
-          >
-            <X size={12} />
-          </button>
         </div>
       ))}
 
