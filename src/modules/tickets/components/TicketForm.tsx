@@ -1,4 +1,6 @@
-import { useState }                      from 'react';
+import { useState, useEffect }            from 'react';
+import { useNavigate }                   from 'react-router-dom';
+import { CheckCircle2 }                  from 'lucide-react';
 import { Modal }                         from '../../../components/ui/Modal';
 import { Button }                        from '../../../components/ui/Button';
 import { Select }                        from '../../../components/ui/Select';
@@ -44,12 +46,26 @@ const EMPTY_FORM = {
 export function TicketForm() {
   const { createOpen, closeCreate } = useTicketStore();
   const raiseMut                    = useRaiseTicket();
+  const navigate                    = useNavigate();
 
   const [step,        setStep]        = useState(0); // 0 = details, 1 = description
   const [form,        setForm]        = useState(EMPTY_FORM);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [errors,      setErrors]      = useState<Partial<typeof EMPTY_FORM>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [submitted,   setSubmitted]   = useState(false);
+
+  // Auto-navigate to /tickets 2.5 s after successful raise
+  useEffect(() => {
+    if (!submitted) return;
+    const t = setTimeout(() => {
+      closeCreate();
+      setSubmitted(false);
+      navigate('/tickets');
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [submitted, closeCreate, navigate]);
 
   // Lookups
   const { data: projects  = [], isLoading: loadingProjects } = useActiveProjectCodes();
@@ -112,13 +128,13 @@ export function TicketForm() {
         description:    form.description.trim(),
         attachments,
       });
-      // Reset on success
+      // Reset form state and show success screen (auto-navigates after 2.5 s)
       setForm(EMPTY_FORM);
       setAttachments([]);
       setErrors({});
       setSubmitError(null);
       setStep(0);
-      closeCreate();
+      setSubmitted(true);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })
@@ -134,6 +150,7 @@ export function TicketForm() {
     setErrors({});
     setSubmitError(null);
     setStep(0);
+    setSubmitted(false);
     closeCreate();
   }
 
@@ -152,16 +169,41 @@ export function TicketForm() {
       </>
     ) : (
       <>
-        <Button variant="outline" size="sm" onClick={() => setStep(0)}>← Back</Button>
+        <Button variant="outline" size="sm" onClick={() => setStep(0)} disabled={raiseMut.isPending}>← Back</Button>
         <Button
           size="sm"
           loading={raiseMut.isPending}
+          disabled={isUploading}
+          title={isUploading ? 'Wait for attachments to finish uploading' : undefined}
           onClick={handleSubmit}
         >
           Raise Ticket
         </Button>
       </>
     );
+
+  // ── Success screen ──────────────────────────────────────────────────────────
+  if (submitted) {
+    return (
+      <Modal open={createOpen} onClose={handleClose} title="" size="md">
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-[#DCFCE7] border border-[#86EFAC]
+                          flex items-center justify-center">
+            <CheckCircle2 size={28} className="text-[#16A34A]" />
+          </div>
+          <div>
+            <p className="text-base font-bold text-[var(--ink)]">Ticket Raised Successfully!</p>
+            <p className="mt-1 text-sm text-[var(--ink-light)]">
+              Redirecting you to Tickets…
+            </p>
+          </div>
+          <Button size="sm" onClick={() => { closeCreate(); setSubmitted(false); navigate('/tickets'); }}>
+            Go to Tickets
+          </Button>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -292,6 +334,7 @@ export function TicketForm() {
             <AttachmentUploader
               value={attachments}
               onChange={setAttachments}
+              onUploadingChange={setIsUploading}
               maxFiles={10}
             />
           </div>
