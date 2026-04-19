@@ -208,7 +208,7 @@ export function CenterGridTable({ flat = false }: { flat?: boolean }) {
             size="sm"
             leftIcon={<Download size={13} />}
             onClick={() => setExportOpen(true)}
-            disabled={rows.length === 0}
+            disabled={!hasProject}
             title="Export to Excel"
           >
             Export
@@ -268,7 +268,6 @@ export function CenterGridTable({ flat = false }: { flat?: boolean }) {
       <CenterGridExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        rows={rows}
       />
     </div>
   );
