@@ -154,4 +154,27 @@ export const centerGridService = {
     api.get<ApiEnvelope<boolean>>('/center-grids/check-service', {
       params: { projectCode, centerCode, serviceName },
     }),
+
+  /**
+   * Export centre grids as an Excel file (.xlsx).
+   * GET /center-grids/export — returns binary blob.
+   * Array params are sent as repeated keys: projectCodes=A&projectCodes=B
+   */
+  export: (filters: {
+    projectCodes?: string[];
+    centerCodes?:  string[];
+    serviceNames?: string[];
+    states?:       string[];
+    cities?:       string[];
+    search?:       string;
+  }) => {
+    const p = new URLSearchParams();
+    filters.projectCodes?.forEach((v) => p.append('projectCodes', v));
+    filters.centerCodes?.forEach((v)  => p.append('centerCodes',  v));
+    filters.serviceNames?.forEach((v) => p.append('serviceNames', v));
+    filters.states?.forEach((v)       => p.append('states',       v));
+    filters.cities?.forEach((v)       => p.append('cities',       v));
+    if (filters.search) p.set('search', filters.search);
+    return api.get('/center-grids/export', { params: p, responseType: 'blob' });
+  },
 };
